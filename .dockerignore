@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.driftwatch
+evidently-main
+dashboard/node_modules
+dashboard/playwright-report
+dashboard/test-results
+dist
+.dist
+*.db
+*.sqlite*

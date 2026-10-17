@@ -1,0 +1,51 @@
+name: DriftWatch CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: driftwatch
+          POSTGRES_USER: driftwatch
+          POSTGRES_DB: driftwatch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U driftwatch -d driftwatch"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -e ".[dev,server]"
+      - run: python -m pytest -q
+        env:
+          DRIFTWATCH_DATABASE_URL: postgresql://driftwatch:driftwatch@localhost:5432/driftwatch
+      - run: python -m pip install pip-audit
+      - run: pip-audit
+      - run: python -m ruff check src tests tools || true
+      - run: docker build -t driftwatch:${{ github.sha }} .
+      - uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: driftwatch:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+  dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm ci --prefix dashboard
+      - run: npm run build --prefix dashboard
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -e .
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e --prefix dashboard

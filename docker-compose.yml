@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: driftwatch
+      POSTGRES_USER: driftwatch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U driftwatch -d driftwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - driftwatch_postgres:/var/lib/postgresql/data
+  driftwatch:
+    build: .
+    ports:
+      - "8765:8765"
+    environment:
+      DRIFTWATCH_ENV: production
+      DRIFTWATCH_SECRET_KEY: ${DRIFTWATCH_SECRET_KEY:?set DRIFTWATCH_SECRET_KEY}
+      DRIFTWATCH_DATABASE_URL: postgresql://driftwatch:${POSTGRES_PASSWORD}@postgres:5432/driftwatch
+      DRIFTWATCH_ALLOWED_ORIGINS: ${DRIFTWATCH_ALLOWED_ORIGINS:-http://localhost:8765}
+      DRIFTWATCH_MAX_BODY_BYTES: ${DRIFTWATCH_MAX_BODY_BYTES:-5242880}
+      DRIFTWATCH_WEBHOOK_URL: ${DRIFTWATCH_WEBHOOK_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - driftwatch_data:/data
+volumes:
+  driftwatch_data:
+  driftwatch_postgres:
