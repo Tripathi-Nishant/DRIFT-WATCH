@@ -92,6 +92,4 @@ placement-predictor/
 └── README.md
 ```
 
-## Author
-**Sumeet Mandal**
-- GitHub: [@SumeetMandal2004](https://github.com/SumeetMandal2004)
+
