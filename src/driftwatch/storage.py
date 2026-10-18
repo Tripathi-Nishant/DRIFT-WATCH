@@ -16,6 +16,11 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def _decode_json(value: Any) -> Any:
+    """Decode SQLite JSON strings while preserving PostgreSQL JSONB values."""
+    return json.loads(value) if isinstance(value, (str, bytes, bytearray)) else value
+
+
 class Store:
     """Thread-safe persistence for a single self-hosted DriftWatch workspace."""
 
@@ -286,7 +291,7 @@ class Store:
                 f"SELECT id, model_id, severity, decision, created_at, report FROM runs {where} ORDER BY created_at DESC LIMIT ?",
                 params,
             )
-            return [{**dict(row), "report": json.loads(row["report"])} for row in rows]
+            return [{**dict(row), "report": _decode_json(row["report"])} for row in rows]
 
     def add_predictions(
         self, model_id: str | None, rows: list[dict[str, Any]]
@@ -358,7 +363,7 @@ class Store:
                 "SELECT * FROM retraining_requests WHERE organization_id = ? ORDER BY created_at DESC",
                 (organization_id,),
             )
-            return [{**dict(row), "report": json.loads(row["report"])} for row in rows]
+            return [{**dict(row), "report": _decode_json(row["report"])} for row in rows]
 
     def approve_retraining_request(
         self, organization_id: str, request_id: str, approver: str
@@ -380,7 +385,7 @@ class Store:
                 "status": "APPROVED",
                 "approved_by": approver,
                 "updated_at": updated,
-                "report": json.loads(row["report"]),
+                "report": _decode_json(row["report"]),
             }
 
     def record_alert(
