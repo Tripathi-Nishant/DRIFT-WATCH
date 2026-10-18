@@ -1,0 +1,7 @@
+# Copy to Caddyfile and replace the hostname after purchasing a domain.
+# For temporary testing, use the AWS public IP and HTTP only.
+
+monitor.example.com {
+    reverse_proxy driftwatch:8765
+    encode gzip
+}

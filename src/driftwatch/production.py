@@ -154,6 +154,83 @@ class GovernedLLMJudge:
         raise ValueError("LLM judge returned no JSON content")
 
 
+class GeminiLLMJudge:
+    """Low-volume Gemini adapter using the native Generative Language API."""
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gemini-2.5-flash",
+        max_records: int = 20,
+        timeout_seconds: float = 20,
+        transport: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
+    ) -> None:
+        if not api_key:
+            raise ValueError("Gemini API key is required")
+        self.api_key = api_key
+        self.model = model
+        self.max_records = max_records
+        self.timeout_seconds = timeout_seconds
+        self._transport = transport
+
+    @classmethod
+    def from_environment(cls) -> GeminiLLMJudge:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is required to enable Gemini")
+        return cls(
+            api_key,
+            model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            max_records=int(os.getenv("GEMINI_MAX_RECORDS", "20")),
+        )
+
+    def evaluate(self, records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if len(records) > self.max_records:
+            raise ValueError("Gemini judge record limit exceeded")
+        safe_records = redacted(records)
+        body = {
+            "contents": [{
+                "parts": [{
+                    "text": (
+                        "Evaluate each record. Return only JSON with a results array. "
+                        "Each result must contain score between 0 and 1.\n"
+                        + json.dumps(safe_records)
+                    )
+                }]
+            }],
+            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
+        }
+        if self._transport:
+            response = self._transport(self.model, body)
+        else:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{self.model}:generateContent?key={self.api_key}"
+            )
+            req = urllib_request.Request(
+                url,
+                data=json.dumps(body).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib_request.urlopen(req, timeout=self.timeout_seconds) as response:
+                response = json.loads(response.read())
+        try:
+            content = response["candidates"][0]["content"]["parts"][0]["text"]
+            result = json.loads(content)
+            results = result["results"]
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as error:
+            raise ValueError("Gemini returned an invalid judge response") from error
+        if not isinstance(results, list) or len(results) != len(records):
+            raise ValueError("Gemini returned an invalid result count")
+        for item in results:
+            score = float(item["score"])
+            if not 0 <= score <= 1:
+                raise ValueError("Gemini score must be between zero and one")
+            item["score"] = score
+        return results
+
+
 def embedding_provider() -> EmbeddingProvider | None:
     """Load the configured sentence-transformers provider when installed."""
     model_name = os.getenv("DRIFTWATCH_EMBEDDING_MODEL")

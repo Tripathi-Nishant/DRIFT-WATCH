@@ -1,6 +1,11 @@
 import pytest
 
-from driftwatch.production import GovernedLLMJudge, LLMJudgeConfig, redacted
+from driftwatch.production import (
+    GeminiLLMJudge,
+    GovernedLLMJudge,
+    LLMJudgeConfig,
+    redacted,
+)
 from driftwatch.vector_store import QdrantVectorStore
 
 
@@ -32,3 +37,15 @@ def test_vector_store_requires_tenant_for_writes():
     store = QdrantVectorStore(url="https://vector.example")
     with pytest.raises(ValueError, match="organization_id"):
         store.upsert([], "")
+
+
+def test_gemini_adapter_validates_json_response():
+    judge = GeminiLLMJudge(
+        "test-key",
+        transport=lambda model, body: {
+            "candidates": [{
+                "content": {"parts": [{"text": '{"results":[{"score":0.7}]}'}]}
+            }]
+        },
+    )
+    assert judge.evaluate([{"question": "q"}])[0]["score"] == 0.7

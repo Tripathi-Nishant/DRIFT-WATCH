@@ -1,5 +1,9 @@
 # Production deployment checklist
 
+For a low-cost first deployment, use [the small AWS guide](aws-small.md). The
+managed multi-service architecture described below is an upgrade path, not a
+requirement for an early beta.
+
 ## Providers
 
 Install the production extra and configure a real embedding model when semantic
