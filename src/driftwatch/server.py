@@ -19,7 +19,7 @@ from .metrics import metric_catalog
 from .monitor import demo_datasets
 from .observability import Metrics, log_event
 from .pipeline import Monitor
-from .production import RateLimiter, allowed_origins, max_body_bytes
+from .production import GeminiLLMJudge, RateLimiter, allowed_origins, max_body_bytes
 from .security import (
     hash_password,
     issue_token,
@@ -423,9 +423,23 @@ class Handler(BaseHTTPRequestHandler):
             model_type=body.get("model_type", "classification"),
             model_name=body.get("model_name", "model"),
         ).run(current, predictions=body.get("predictions"), labels=body.get("labels"))
-        run = STORE.record_run(
-            result.to_dict(), body.get("model_id"), identity["org_id"]
-        )
+        report = result.to_dict()
+        judge_records = body.get("llm_judge_records")
+        if isinstance(judge_records, list):
+            if os.getenv("GEMINI_API_KEY"):
+                report["llm_judge"] = {
+                    "available": True,
+                    "provider": "gemini",
+                    "results": GeminiLLMJudge.from_environment().evaluate(
+                        judge_records
+                    ),
+                }
+            else:
+                report["llm_judge"] = {
+                    "available": False,
+                    "reason": "GEMINI_API_KEY is not configured",
+                }
+        run = STORE.record_run(report, body.get("model_id"), identity["org_id"])
         ALERTS.dispatch(run)
         self._send(json.dumps(run["report"]).encode())
 
