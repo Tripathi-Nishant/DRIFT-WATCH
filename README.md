@@ -37,7 +37,7 @@ curl http://localhost:8765/readyz
 
 ## Local development
 
-DriftWatch requires Python 3.12. Node.js 22 is required to build and test the dashboard.
+DriftWatch requires Python 3.11+ (3.12 recommended). Node.js 22 is only required when building the dashboard.
 
 ```powershell
 python -m venv .venv
@@ -50,6 +50,24 @@ Start the development server:
 
 ```powershell
 driftwatch serve
+```
+
+### Install the library from GitHub
+
+The package is installable with pip today. Until a PyPI release is published, install the maintained repository version:
+
+```bash
+python -m pip install "driftwatch @ git+https://github.com/Tripathi-Nishant/DRIFT-WATCH.git"
+driftwatch run --reference reference.csv --current current.csv --out report.html
+```
+
+The `run` command creates a self-contained HTML report with drift scores, feature distributions, data-quality findings, monitoring tests, decision trace, and optional model-performance metrics. The package can also be used directly:
+
+```python
+from driftwatch import Monitor
+
+report = Monitor.from_reference(reference_df, model_name="my-college-model").run(current_df)
+report.save_html("report.html")
 ```
 
 The default local store is `.driftwatch/driftwatch.db`. Set `DRIFTWATCH_DB` to use another SQLite file, or set `DRIFTWATCH_DATABASE_URL` for PostgreSQL.
