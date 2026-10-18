@@ -33,6 +33,9 @@ production = [
     "sentence-transformers>=3.0,<6.0",
     "Pillow>=10.0,<13.0",
 ]
+distributed = [
+    "redis>=5.0,<7.0",
+]
 
 [project.scripts]
 driftwatch = "driftwatch.cli:main"

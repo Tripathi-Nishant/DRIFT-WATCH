@@ -21,10 +21,12 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Classification performance | Implemented | Accuracy, precision, recall, F1 and ROC-AUC. |
 | Regression performance | Implemented | MAE, RMSE, R² and MAPE. |
 | Decision layer | DriftWatch differentiator | Severity, confidence, rule trace, impact estimate and ACT/MONITOR/IGNORE. |
-| Production embedding/image/LLM judges | Not implemented | Baseline metrics exist; provider-specific models, calibration and safety governance remain required. |
+| Production embedding/image/LLM judges | Governed adapters | Sentence Transformers embeddings plus opt-in authenticated LLM judge controls for prompt versioning, PII redaction, budgets, and calibration bounds. Vision quality remains provider-specific. |
+| Vector storage | Optional adapter | Qdrant REST adapter with organization-scoped upserts and searches; deployment must provide and validate a Qdrant cluster. |
+| Distributed ingestion | Optional adapter | Redis-backed queue plus bounded local queue; deployment must provide Redis persistence and worker supervision. |
 | Statistical calibration against Evidently | In progress | The benchmark runner is present; matched-method validation is still required. |
 
 Evidently remains the stronger general-purpose monitoring framework. DriftWatch now
-has a metric-family architecture and baseline text support, but it is not claiming
-semantic text, embeddings, image, ranking, LLM, or RAG parity. DriftWatch's intended
-contribution is the transparent decision layer on top of monitoring signals.
+has a metric-family architecture, governed provider adapters, tenant-aware storage,
+and a transparent decision layer on top of monitoring signals. Provider quality,
+calibration, and scale still require validation in each deployment environment.
