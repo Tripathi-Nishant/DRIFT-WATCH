@@ -36,12 +36,12 @@ class Store:
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS models (
-                    id TEXT PRIMARY KEY, name TEXT NOT NULL, version TEXT NOT NULL,
+                    id TEXT PRIMARY KEY, organization_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL,
                     model_type TEXT NOT NULL, created_at TEXT NOT NULL,
                     reference_profile TEXT
                 );
                 CREATE TABLE IF NOT EXISTS runs (
-                    id TEXT PRIMARY KEY, model_id TEXT, severity TEXT NOT NULL,
+                    id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, severity TEXT NOT NULL,
                     decision TEXT NOT NULL, created_at TEXT NOT NULL,
                     report TEXT NOT NULL,
                     FOREIGN KEY(model_id) REFERENCES models(id)
@@ -92,6 +92,11 @@ class Store:
                 );
                 """
             )
+            for table, column in (("models", "organization_id"), ("runs", "organization_id")):
+                try:
+                    db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+                except sqlite3.OperationalError:
+                    pass
 
     def create_organization(self, name: str) -> dict[str, Any]:
         organization = {"id": str(uuid.uuid4()), "name": name, "created_at": _now()}
@@ -209,9 +214,11 @@ class Store:
         version: str = "1.0.0",
         model_type: str = "classification",
         reference_profile: dict[str, Any] | None = None,
+        organization_id: str | None = None,
     ) -> dict[str, Any]:
         model = {
             "id": str(uuid.uuid4()),
+            "organization_id": organization_id,
             "name": name,
             "version": version,
             "model_type": model_type,
@@ -219,7 +226,7 @@ class Store:
         }
         with self._lock, self._connect() as db:
             db.execute(
-                "INSERT INTO models VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO models (id, organization_id, name, version, model_type, created_at, reference_profile) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     *model.values(),
                     json.dumps(reference_profile) if reference_profile else None,
@@ -227,21 +234,27 @@ class Store:
             )
         return model
 
-    def list_models(self) -> list[dict[str, Any]]:
+    def list_models(self, organization_id: str | None = None) -> list[dict[str, Any]]:
         with self._connect() as db:
+            where = "WHERE organization_id = ?" if organization_id else ""
+            params = (organization_id,) if organization_id else ()
             return [
                 dict(row)
                 for row in db.execute(
-                    "SELECT id, name, version, model_type, created_at FROM models "
-                    "ORDER BY created_at DESC"
+                    f"SELECT id, name, version, model_type, created_at FROM models {where} ORDER BY created_at DESC",
+                    params,
                 )
             ]
 
     def record_run(
-        self, report: dict[str, Any], model_id: str | None = None
+        self,
+        report: dict[str, Any],
+        model_id: str | None = None,
+        organization_id: str | None = None,
     ) -> dict[str, Any]:
         run = {
             "id": str(uuid.uuid4()),
+            "organization_id": organization_id,
             "model_id": model_id,
             "severity": report["summary"]["severity"],
             "decision": report["summary"]["decision"],
@@ -250,9 +263,10 @@ class Store:
         }
         with self._lock, self._connect() as db:
             db.execute(
-                "INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO runs (id, organization_id, model_id, severity, decision, created_at, report) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     run["id"],
+                    organization_id,
                     model_id,
                     run["severity"],
                     run["decision"],
@@ -264,12 +278,13 @@ class Store:
             "report": report
         }
 
-    def list_runs(self, limit: int = 30) -> list[dict[str, Any]]:
+    def list_runs(self, limit: int = 30, organization_id: str | None = None) -> list[dict[str, Any]]:
         with self._connect() as db:
+            where = "WHERE organization_id = ?" if organization_id else ""
+            params = (organization_id, max(1, min(limit, 100))) if organization_id else (max(1, min(limit, 100)),)
             rows = db.execute(
-                "SELECT id, model_id, severity, decision, created_at, report FROM runs "
-                "ORDER BY created_at DESC LIMIT ?",
-                (max(1, min(limit, 100)),),
+                f"SELECT id, model_id, severity, decision, created_at, report FROM runs {where} ORDER BY created_at DESC LIMIT ?",
+                params,
             )
             return [{**dict(row), "report": json.loads(row["report"])} for row in rows]
 
@@ -385,11 +400,12 @@ class Store:
             )
         return alert
 
-    def list_alerts(self, limit: int = 30) -> list[dict[str, Any]]:
+    def list_alerts(self, limit: int = 30, organization_id: str | None = None) -> list[dict[str, Any]]:
         with self._connect() as db:
+            where = "WHERE run_id IN (SELECT id FROM runs WHERE organization_id = ?)" if organization_id else ""
+            params = (organization_id, max(1, min(limit, 100))) if organization_id else (max(1, min(limit, 100)),)
             rows = db.execute(
-                "SELECT id, run_id, channel, status, created_at, detail "
-                "FROM alerts ORDER BY created_at DESC LIMIT ?",
-                (max(1, min(limit, 100)),),
+                f"SELECT id, run_id, channel, status, created_at, detail FROM alerts {where} ORDER BY created_at DESC LIMIT ?",
+                params,
             )
             return [dict(row) for row in rows]

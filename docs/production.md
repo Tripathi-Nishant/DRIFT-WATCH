@@ -52,3 +52,31 @@ python tools/load_test.py --url https://monitor.example.com/healthz --requests 1
 Record p50/p95 latency and error rate for the target deployment. This script is
 an acceptance harness, not a substitute for capacity testing with production
 payloads and a managed database.
+
+## Backups, rollback, and connection pooling
+
+The PostgreSQL backend uses `psycopg_pool` with configurable bounds:
+
+```powershell
+$env:DRIFTWATCH_DB_POOL_MIN = "2"
+$env:DRIFTWATCH_DB_POOL_MAX = "20"
+```
+
+The container entrypoint applies ordered files in `migrations/` and records
+applied versions in `driftwatch_schema_migrations`. Take a custom-format backup
+before migrations or releases:
+
+```powershell
+python tools/backup_postgres.py --output backups/driftwatch-$(Get-Date -Format yyyyMMddHHmmss).dump
+```
+
+Restore to a maintenance database with:
+
+```powershell
+python tools/restore_postgres.py backups/driftwatch-20260101000000.dump
+```
+
+Keep backups outside the application host, encrypt them at rest, test restores
+regularly, and use a release migration that is backward compatible with the
+previous application version. A migration is not considered deployable until it
+has passed against a production-sized database snapshot.

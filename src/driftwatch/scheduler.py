@@ -18,11 +18,12 @@ def run_once(
     config: dict[str, Any] | None = None,
 ) -> str:
     config = config or {}
-    read = lambda path: (
-        pd.read_parquet(path)
-        if Path(path).suffix.lower() == ".parquet"
-        else pd.read_csv(path)
-    )
+    def read(path: str) -> pd.DataFrame:
+        return (
+            pd.read_parquet(path)
+            if Path(path).suffix.lower() == ".parquet"
+            else pd.read_csv(path)
+        )
     result = Monitor.from_reference(
         read(reference_path),
         model_name=config.get("model_name", "scheduled-model"),

@@ -17,12 +17,11 @@ from sklearn.metrics import (
     mean_absolute_percentage_error,
     mean_squared_error,
     precision_score,
-    recall_score,
     r2_score,
+    recall_score,
     roc_auc_score,
 )
 
-from .decision import DecisionConfig, evaluate_decision
 from .advanced_metrics import (
     image_metrics,
     llm_metrics,
@@ -30,6 +29,7 @@ from .advanced_metrics import (
     ranking_metrics,
     semantic_text_metrics,
 )
+from .decision import DecisionConfig, evaluate_decision
 from .metrics import (
     data_quality_metrics,
     prediction_quality_metrics,

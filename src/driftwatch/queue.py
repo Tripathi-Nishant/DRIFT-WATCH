@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from queue import Full, Queue
 from threading import Event, Thread
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass

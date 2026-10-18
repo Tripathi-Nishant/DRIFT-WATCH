@@ -153,19 +153,22 @@ class Handler(BaseHTTPRequestHandler):
                 )
             return
         if path == "/api/runs":
-            if not self._require_read_access():
+            identity = self._require_read_access()
+            if not identity:
                 return
-            self._send(json.dumps(STORE.list_runs()).encode())
+            self._send(json.dumps(STORE.list_runs(organization_id=identity["org_id"])).encode())
             return
         if path == "/api/models":
-            if not self._require_read_access():
+            identity = self._require_read_access()
+            if not identity:
                 return
-            self._send(json.dumps(STORE.list_models()).encode())
+            self._send(json.dumps(STORE.list_models(identity["org_id"])).encode())
             return
         if path == "/api/alerts":
-            if not self._require_read_access():
+            identity = self._require_read_access()
+            if not identity:
                 return
-            self._send(json.dumps(STORE.list_alerts()).encode())
+            self._send(json.dumps(STORE.list_alerts(organization_id=identity["org_id"])).encode())
             return
         if path == "/api/v1/me":
             identity = self._identity()
@@ -357,9 +360,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         if path in {"/api/v1/projects", "/api/v1/api-keys"}:
-            identity = self._identity()
+            identity = self._require_write_access()
             if not identity:
-                self._send(b'{"error":"authentication required"}', status=401)
                 return
             if path == "/api/v1/projects":
                 project = STORE.create_project(identity["org_id"], body["name"])
@@ -393,6 +395,7 @@ class Handler(BaseHTTPRequestHandler):
                         body.get("version", "1.0.0"),
                         body.get("model_type", "classification"),
                         body.get("reference_profile"),
+                        identity["org_id"],
                     )
                 ).encode(),
                 status=201,
@@ -420,7 +423,9 @@ class Handler(BaseHTTPRequestHandler):
             model_type=body.get("model_type", "classification"),
             model_name=body.get("model_name", "model"),
         ).run(current, predictions=body.get("predictions"), labels=body.get("labels"))
-        run = STORE.record_run(result.to_dict(), body.get("model_id"))
+        run = STORE.record_run(
+            result.to_dict(), body.get("model_id"), identity["org_id"]
+        )
         ALERTS.dispatch(run)
         self._send(json.dumps(run["report"]).encode())
 

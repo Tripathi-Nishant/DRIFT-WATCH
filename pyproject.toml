@@ -25,9 +25,11 @@ dev = [
 ]
 server = [
     "psycopg[binary]>=3.2,<4.0",
+    "psycopg-pool>=3.2,<4.0",
 ]
 production = [
     "psycopg[binary]>=3.2,<4.0",
+    "psycopg-pool>=3.2,<4.0",
     "sentence-transformers>=3.0,<6.0",
     "Pillow>=10.0,<13.0",
 ]
@@ -50,6 +52,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B905"]
 
 [tool.mypy]
 python_version = "3.12"

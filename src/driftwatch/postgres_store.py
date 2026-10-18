@@ -19,6 +19,7 @@ class PostgresStore(Store):
         try:
             import psycopg
             from psycopg.rows import dict_row
+            from psycopg_pool import ConnectionPool
         except ImportError as error:
             raise RuntimeError(
                 "PostgreSQL support requires: pip install driftwatch[server]"
@@ -30,12 +31,17 @@ class PostgresStore(Store):
             raise ValueError(
                 "DRIFTWATCH_DATABASE_URL must be a PostgreSQL connection URL"
             )
+        self._pool = ConnectionPool(
+            self.url,
+            min_size=max(1, int(os.getenv("DRIFTWATCH_DB_POOL_MIN", "2"))),
+            max_size=max(2, int(os.getenv("DRIFTWATCH_DB_POOL_MAX", "10"))),
+            kwargs={"row_factory": dict_row},
+            open=True,
+        )
         super().__init__(path=":postgres:")
 
     def _connect(self):
-        return _PostgresConnection(
-            self._psycopg.connect(self.url, row_factory=self._dict_row)
-        )
+        return _PostgresConnection(self._pool.connection())
 
     def _init(self) -> None:
         with self._connect() as db:
@@ -47,26 +53,29 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, key_hash TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT);
                 CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, organization_id TEXT, user_id TEXT, action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, detail TEXT, created_at TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS models (id TEXT PRIMARY KEY, name TEXT NOT NULL, version TEXT NOT NULL, model_type TEXT NOT NULL, created_at TEXT NOT NULL, reference_profile JSONB);
-                CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, model_id TEXT, severity TEXT NOT NULL, decision TEXT NOT NULL, created_at TEXT NOT NULL, report JSONB NOT NULL);
+                CREATE TABLE IF NOT EXISTS models (id TEXT PRIMARY KEY, organization_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, model_type TEXT NOT NULL, created_at TEXT NOT NULL, reference_profile JSONB);
+                CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, severity TEXT NOT NULL, decision TEXT NOT NULL, created_at TEXT NOT NULL, report JSONB NOT NULL);
                 CREATE TABLE IF NOT EXISTS predictions (id TEXT PRIMARY KEY, model_id TEXT, prediction TEXT NOT NULL, features JSONB NOT NULL, created_at TEXT NOT NULL, label TEXT);
                 CREATE TABLE IF NOT EXISTS feedback (id TEXT PRIMARY KEY, prediction_id TEXT NOT NULL, label TEXT NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, channel TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, detail TEXT);
                 CREATE TABLE IF NOT EXISTS retraining_requests (id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, status TEXT NOT NULL, requested_by TEXT, approved_by TEXT, report JSONB NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
                 """
             )
 
 
 class _PostgresConnection:
-    def __init__(self, connection: Any) -> None:
-        self.connection = connection
+    def __init__(self, pooled_connection: Any) -> None:
+        self.pooled_connection = pooled_connection
+        self.connection = None
 
     def __enter__(self):
-        self.connection.__enter__()
+        self.connection = self.pooled_connection.__enter__()
         return self
 
     def __exit__(self, *args):
-        return self.connection.__exit__(*args)
+        return self.pooled_connection.__exit__(*args)
 
     def execute(self, query: str, params: tuple[Any, ...] = ()):
         return self.connection.execute(query.replace("?", "%s"), params)
