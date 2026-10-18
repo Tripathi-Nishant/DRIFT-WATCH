@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import numpy as np
 import pandas as pd
 
 from .alerts import AlertDispatcher
@@ -418,11 +419,33 @@ class Handler(BaseHTTPRequestHandler):
             return
         reference = pd.DataFrame(body["reference"])
         current = pd.DataFrame(body["current"])
+        semantic_text = None
+        if isinstance(body.get("semantic_text_reference"), list) and isinstance(
+            body.get("semantic_text_current"), list
+        ):
+            semantic_text = (
+                body["semantic_text_reference"],
+                body["semantic_text_current"],
+            )
+        images = None
+        if isinstance(body.get("images_reference"), list) and isinstance(
+            body.get("images_current"), list
+        ):
+            images = (
+                np.asarray(body["images_reference"]),
+                np.asarray(body["images_current"]),
+            )
         result = Monitor.from_reference(
             reference,
             model_type=body.get("model_type", "classification"),
             model_name=body.get("model_name", "model"),
-        ).run(current, predictions=body.get("predictions"), labels=body.get("labels"))
+        ).run(
+            current,
+            predictions=body.get("predictions"),
+            labels=body.get("labels"),
+            semantic_text=semantic_text,
+            images=images,
+        )
         report = result.to_dict()
         judge_records = body.get("llm_judge_records")
         if isinstance(judge_records, list):

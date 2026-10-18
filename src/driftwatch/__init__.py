@@ -10,6 +10,8 @@ from .advanced_metrics import (
 from .decision import DecisionConfig
 from .metrics import metric_catalog
 from .monitor import analyze, demo_datasets
+from .multimodal import analyze as analyze_multimodal
+from .multimodal import analyze_images, analyze_text, load_image_batch
 from .pipeline import Monitor, MonitorResult, ReferenceProfile
 from .production import GeminiLLMJudge
 from .vector_store import QdrantVectorStore
@@ -31,5 +33,9 @@ __all__ = [
     "ranking_metrics",
     "llm_metrics",
     "rag_metrics",
+    "analyze_multimodal",
+    "analyze_text",
+    "analyze_images",
+    "load_image_batch",
     "__version__",
 ]

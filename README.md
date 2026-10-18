@@ -70,6 +70,27 @@ report = Monitor.from_reference(reference_df, model_name="my-college-model").run
 report.save_html("report.html")
 ```
 
+### Text and image monitoring
+
+The same package includes local-first adapters for multimodal college projects:
+
+```python
+from driftwatch import analyze_images, analyze_text, load_image_batch
+
+text_report = analyze_text(reference_questions, current_questions)
+reference_images = load_image_batch(["data/reference/a.png", "data/reference/b.png"])
+current_images = load_image_batch(["data/current/a.png", "data/current/b.png"])
+image_report = analyze_images(reference_images, current_images)
+```
+
+Install the optional image dependency only when needed:
+
+```bash
+python -m pip install "driftwatch[production]"
+```
+
+Image monitoring provides shape, brightness, contrast, clipping, edge-energy, and pixel-distribution checks. It is a transparent baseline; semantic image embeddings can be added later without changing the report contract.
+
 The default local store is `.driftwatch/driftwatch.db`. Set `DRIFTWATCH_DB` to use another SQLite file, or set `DRIFTWATCH_DATABASE_URL` for PostgreSQL.
 
 ## Repository layout

@@ -1,0 +1,2 @@
+.advanced-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.advanced-item{background:#f8f8fc;border:1px solid #ececf3;border-radius:8px;padding:13px}.advanced-item b{display:block;margin-bottom:8px}.advanced-item pre{max-height:180px;overflow:auto;margin:0;font-size:11px;color:#666}
+@media(max-width:950px){.advanced-grid{grid-template-columns:1fr}}
