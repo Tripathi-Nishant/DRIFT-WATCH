@@ -107,6 +107,7 @@ tools/             Migration and load-test utilities
 
 ## Documentation
 
+- [Start here: full setup and placement case study](START_HERE.md)
 - [Production deployment](docs/production.md)
 - [PostgreSQL setup](docs/postgresql.md)
 - [Capabilities](docs/capabilities.md)
