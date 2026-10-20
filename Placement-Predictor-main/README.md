@@ -73,6 +73,15 @@ python integrations/driftwatch_monitor.py \
   --current-labels data/production/current_labels.csv
 ```
 
+For a lightweight scheduled monitor, keep the following process running:
+
+```bash
+python integrations/watch_driftwatch.py \
+  --email student@example.com \
+  --password your-password \
+  --interval 3600
+```
+
 ##  Project Structure
 ```
 placement-predictor/

@@ -37,6 +37,7 @@ from .metrics import (
     text_metrics,
 )
 from .monitor import analyze
+from .production import embedding_provider
 
 
 def _jsonable(value: Any) -> Any:
@@ -423,7 +424,9 @@ class Monitor:
                 predictions, labels, model_type=self.model_type
             )
         if semantic_text is not None:
-            base["semantic_text"] = semantic_text_metrics(*semantic_text)
+            base["semantic_text"] = semantic_text_metrics(
+                *semantic_text, provider=embedding_provider()
+            )
         if images is not None:
             base["image_metrics"] = image_metrics(*images)
         if ranking_relevance is not None:
