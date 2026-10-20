@@ -12,14 +12,17 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
     f1_score,
     mean_absolute_error,
     mean_absolute_percentage_error,
     mean_squared_error,
+    precision_recall_curve,
     precision_score,
     r2_score,
     recall_score,
     roc_auc_score,
+    roc_curve,
 )
 
 from .advanced_metrics import (
@@ -266,6 +269,11 @@ def _performance(
                 ),
             }
         )
+        result["residual_summary"] = {
+            "mean": round(float((label_values.astype(float) - prediction_values.astype(float)).mean()), 6),
+            "std": round(float((label_values.astype(float) - prediction_values.astype(float)).std()), 6),
+            "p95_absolute": round(float(np.quantile(np.abs(label_values.astype(float) - prediction_values.astype(float)), 0.95)), 6),
+        }
     else:
         labels_int = label_values.astype(int)
         predicted = (
@@ -296,12 +304,28 @@ def _performance(
                     ),
                     6,
                 ),
+                "confusion_matrix": confusion_matrix(labels_int, predicted).tolist(),
+                "confusion_labels": [str(value) for value in sorted(np.unique(labels_int))],
+                "prediction_distribution": {
+                    str(value): int(count)
+                    for value, count in zip(*np.unique(predicted, return_counts=True))
+                },
             }
         )
         if len(np.unique(labels_int)) == 2 and len(np.unique(prediction_values)) > 1:
             result["roc_auc"] = round(
                 float(roc_auc_score(labels_int, prediction_values)), 6
             )
+            fpr, tpr, _ = roc_curve(labels_int, prediction_values)
+            precision, recall, _ = precision_recall_curve(labels_int, prediction_values)
+            result["roc_curve"] = {
+                "fpr": [round(float(value), 6) for value in fpr[:: max(1, len(fpr) // 50)]],
+                "tpr": [round(float(value), 6) for value in tpr[:: max(1, len(tpr) // 50)]],
+            }
+            result["pr_curve"] = {
+                "recall": [round(float(value), 6) for value in recall[:: max(1, len(recall) // 50)]],
+                "precision": [round(float(value), 6) for value in precision[:: max(1, len(precision) // 50)]],
+            }
     return result
 
 

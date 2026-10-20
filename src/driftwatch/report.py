@@ -54,6 +54,17 @@ def render_html(report: dict[str, Any]) -> str:
         if report.get("performance")
         else "No labels supplied for this run."
     )
+    performance_data = report.get("performance") or {}
+    confusion = performance_data.get("confusion_matrix")
+    confusion_labels = performance_data.get("confusion_labels", [])
+    confusion_html = ""
+    if confusion:
+        cells = "".join(
+            f"<span style='opacity:{0.2 + value / max(max(row) for row in confusion):.2f}'><b>{value}</b><small>{html.escape(str(confusion_labels[r] if r < len(confusion_labels) else r))} / {html.escape(str(confusion_labels[c] if c < len(confusion_labels) else c))}</small></span>"
+            for r, row in enumerate(confusion)
+            for c, value in enumerate(row)
+        )
+        confusion_html = f"<div class='confusion'><h3>Confusion matrix</h3><p class='muted'>Rows are actual labels; columns are predicted labels.</p><div class='matrix'>{cells}</div></div>"
     impact = (
         json.dumps(summary.get("impact_estimate"), indent=2)
         if summary.get("impact_estimate")
@@ -103,7 +114,7 @@ th{{font-size:10px;color:#999;text-transform:uppercase}}code{{font-size:10px;wor
 .histogram{{display:flex;align-items:end;gap:2px;height:52px;min-width:120px;border-bottom:1px solid #ddd}}
 .bar-pair{{display:flex;align-items:end;gap:1px;height:50px}}.bar{{display:block;width:5px;border-radius:2px 2px 0 0}}
 .bar.ref{{background:#bdb2ff}}.bar.cur{{background:#e27783}}
-pre{{background:#171827;color:#e9e9f3;padding:16px;border-radius:9px;overflow:auto}}
+pre{{background:#171827;color:#e9e9f3;padding:16px;border-radius:9px;overflow:auto}}.confusion{{background:#f7f5ff;border-radius:10px;padding:15px;max-width:360px}}.matrix{{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}}.matrix span{{display:grid;place-items:center;min-height:62px;background:#7055e4;color:#fff;border-radius:6px}}.matrix small{{font-size:10px;opacity:.8}}
 </style></head><body>
 <header><p class="muted">DRIFTWATCH OFFLINE REPORT</p>
 <h1>{html.escape(summary.get("model", "model"))}</h1>
@@ -122,7 +133,7 @@ pre{{background:#171827;color:#e9e9f3;padding:16px;border-radius:9px;overflow:au
 <section class="card"><h2>Monitoring tests</h2><table><thead><tr><th>Test</th><th>Description</th><th>Result</th><th>Value</th><th>Threshold</th></tr></thead><tbody>{test_rows}</tbody></table></section>
 <section class="card"><h2>Joint and subgroup drift</h2><h3>Domain classifier</h3><pre>{html.escape(multivariate)}</pre><h3>Subgroups</h3><pre>{html.escape(subgroups)}</pre></section>
 <section class="card"><h2>Decision trace</h2><p>Recommendation: <b>{summary.get("recommendation_type", "UNSPECIFIED")}</b></p><pre>{html.escape(json.dumps(summary.get("rule_trace", []), indent=2))}</pre></section>
-<section class="card"><h2>Performance</h2><pre>{html.escape(performance)}</pre></section>
+<section class="card"><h2>Model performance</h2><div class="summary">{''.join(f"<div class='metric'><b>{value}</b> {html.escape(key)}</div>" for key, value in performance_data.items() if isinstance(value, (int, float)) and key not in {'label_coverage'})}</div>{confusion_html}<pre>{html.escape(performance)}</pre></section>
 <section class="card"><h2>Business impact</h2><pre>{html.escape(impact)}</pre></section>
 <section class="card"><h2>Caveat</h2><p>{html.escape(summary["honesty_note"])}</p></section>
 <details><summary>Raw JSON</summary><pre>{html.escape(payload)}</pre></details></body></html>"""
