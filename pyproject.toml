@@ -32,6 +32,8 @@ production = [
     "psycopg-pool>=3.2,<4.0",
     "sentence-transformers>=3.0,<6.0",
     "Pillow>=10.0,<13.0",
+    "torch>=2.4,<3.0",
+    "transformers>=4.45,<5.0",
 ]
 distributed = [
     "redis>=5.0,<7.0",
