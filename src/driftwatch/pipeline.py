@@ -23,6 +23,7 @@ from sklearn.metrics import (
 )
 
 from .advanced_metrics import (
+    embedding_shift_metrics,
     image_metrics,
     llm_metrics,
     rag_metrics,
@@ -37,7 +38,7 @@ from .metrics import (
     text_metrics,
 )
 from .monitor import analyze
-from .production import embedding_provider
+from .production import embedding_provider, image_embedding_provider
 
 
 def _jsonable(value: Any) -> Any:
@@ -429,6 +430,11 @@ class Monitor:
             )
         if images is not None:
             base["image_metrics"] = image_metrics(*images)
+            vision_provider = image_embedding_provider()
+            if vision_provider is not None:
+                base["image_embedding_metrics"] = embedding_shift_metrics(
+                    *images, vision_provider
+                )
         if ranking_relevance is not None:
             base["ranking_metrics"] = ranking_metrics(ranking_relevance)
         if llm_records is not None:

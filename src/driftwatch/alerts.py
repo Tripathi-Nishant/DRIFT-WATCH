@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import smtplib
 import time
 import urllib.error
 import urllib.request
+from email.message import EmailMessage
 from typing import Any
 
 from .storage import Store
@@ -31,9 +33,15 @@ class AlertDispatcher:
             "reasons": summary.get("reasons", []),
         }
         if not self.webhook_url:
-            return self.store.record_alert(
+            webhook_result = self.store.record_alert(
                 run["id"], "webhook", "skipped", "Webhook URL is not configured"
             )
+        else:
+            webhook_result = self._dispatch_webhook(run, payload, retries)
+        self._dispatch_email(run, payload, retries)
+        return webhook_result
+
+    def _dispatch_webhook(self, run: dict[str, Any], payload: dict[str, Any], retries: int):
         status, detail = "failed", "delivery failed"
         for attempt in range(max(1, retries)):
             try:
@@ -53,3 +61,29 @@ class AlertDispatcher:
                 if attempt + 1 < retries:
                     time.sleep(0.25 * (2**attempt))
         return self.store.record_alert(run["id"], "webhook", status, detail)
+
+    def _dispatch_email(self, run: dict[str, Any], payload: dict[str, Any], retries: int) -> None:
+        host, recipient = os.getenv("DRIFTWATCH_SMTP_HOST"), os.getenv("DRIFTWATCH_ALERT_EMAIL")
+        if not host or not recipient:
+            return
+        message = EmailMessage()
+        message["Subject"] = f"DriftWatch {payload['severity']} alert: {payload['model']}"
+        message["From"] = os.getenv("DRIFTWATCH_SMTP_FROM", recipient)
+        message["To"] = recipient
+        message.set_content(json.dumps(payload, indent=2))
+        for attempt in range(max(1, retries)):
+            try:
+                with smtplib.SMTP(host, int(os.getenv("DRIFTWATCH_SMTP_PORT", "587")), timeout=5) as client:
+                    if os.getenv("DRIFTWATCH_SMTP_TLS", "true").lower() == "true":
+                        client.starttls()
+                    username, password = os.getenv("DRIFTWATCH_SMTP_USER"), os.getenv("DRIFTWATCH_SMTP_PASSWORD")
+                    if username and password:
+                        client.login(username, password)
+                    client.send_message(message)
+                self.store.record_alert(run["id"], "email", "delivered", f"attempts={attempt + 1}")
+                return
+            except (OSError, smtplib.SMTPException) as error:
+                if attempt + 1 == retries:
+                    self.store.record_alert(run["id"], "email", "failed", str(error))
+                else:
+                    time.sleep(0.25 * (2**attempt))

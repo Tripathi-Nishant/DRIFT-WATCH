@@ -98,6 +98,24 @@ def image_metrics(reference: Any, current: Any) -> dict[str, Any]:
     }
 
 
+def embedding_shift_metrics(reference: Any, current: Any, provider: Any) -> dict[str, Any]:
+    """Compare two batches of vectors from a text or vision embedding provider."""
+    reference_vectors = np.asarray(provider.encode(reference), dtype=float)
+    current_vectors = np.asarray(provider.encode(current), dtype=float)
+    if reference_vectors.ndim != 2 or current_vectors.ndim != 2:
+        return {"available": False, "reason": "embedding provider must return 2D vectors"}
+    reference_centroid = reference_vectors.mean(axis=0, keepdims=True)
+    current_centroid = current_vectors.mean(axis=0, keepdims=True)
+    similarity = cosine_similarity(reference_centroid, current_centroid)[0, 0]
+    return {
+        "available": True,
+        "method": getattr(provider, "name", "custom_embedding_provider"),
+        "dimensions": int(reference_vectors.shape[1]),
+        "centroid_cosine_similarity": _round(similarity),
+        "embedding_shift": _round(1.0 - similarity),
+    }
+
+
 def ranking_metrics(
     relevance: Any, recommendations: Any | None = None, k: int = 10
 ) -> dict[str, Any]:

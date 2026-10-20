@@ -113,6 +113,8 @@ tools/             Migration and load-test utilities
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
+Alerts support Slack/Discord-compatible webhooks with retries. Optional email alerts use `DRIFTWATCH_SMTP_*` variables. Real text embeddings can be enabled with `DRIFTWATCH_EMBEDDING_MODEL`; optional CLIP image embeddings can be enabled with `DRIFTWATCH_IMAGE_EMBEDDING_MODEL` after installing `driftwatch[production]`. These large model dependencies remain opt-in.
+
 ## License
 
 DriftWatch is released under the [MIT License](LICENSE).

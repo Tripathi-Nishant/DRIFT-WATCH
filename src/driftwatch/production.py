@@ -245,6 +245,43 @@ def embedding_provider() -> EmbeddingProvider | None:
     return SentenceTransformer(model_name)
 
 
+def image_embedding_provider() -> Any | None:
+    """Load an optional CLIP image encoder when configured by environment."""
+    model_name = os.getenv("DRIFTWATCH_IMAGE_EMBEDDING_MODEL")
+    if not model_name:
+        return None
+    try:
+        import numpy as np
+        import torch
+        from PIL import Image
+        from transformers import CLIPModel, CLIPProcessor
+    except ImportError as error:
+        raise RuntimeError(
+            "DRIFTWATCH_IMAGE_EMBEDDING_MODEL requires the optional vision dependencies"
+        ) from error
+
+    class ClipProvider:
+        name = f"clip:{model_name}"
+
+        def __init__(self) -> None:
+            self.processor = CLIPProcessor.from_pretrained(model_name)
+            self.model = CLIPModel.from_pretrained(model_name)
+            self.model.eval()
+
+        def encode(self, images: Any) -> np.ndarray:
+            values = []
+            for image in images:
+                if isinstance(image, np.ndarray):
+                    image = Image.fromarray(np.clip(image, 0, 255).astype("uint8"))
+                values.append(image)
+            inputs = self.processor(images=values, return_tensors="pt")
+            with torch.no_grad():
+                vectors = self.model.get_image_features(**inputs)
+            return vectors.cpu().numpy()
+
+    return ClipProvider()
+
+
 def redacted(value: Any, *, sensitive_keys: set[str] | None = None) -> Any:
     """Recursively redact common PII/secrets before audit or debug storage."""
     keys = sensitive_keys or {
