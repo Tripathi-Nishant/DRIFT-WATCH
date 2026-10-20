@@ -69,6 +69,12 @@ def main() -> int:
 
     reference = pd.read_csv(args.reference)
     current = pd.read_csv(args.current)
+    if Path(args.reference).resolve() == Path(args.current).resolve():
+        raise ValueError(
+            "Reference and current files are identical. Create a separate production batch to measure drift."
+        )
+    if list(reference.columns) != list(current.columns):
+        raise ValueError("Reference and current files must have the same prepared feature columns")
     with open(args.model_path, "rb") as file:
         model = pickle.load(file)
     current_predictions = model.predict(current).tolist()

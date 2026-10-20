@@ -82,6 +82,22 @@ python integrations/watch_driftwatch.py \
   --interval 3600
 ```
 
+### Create a visible drift demonstration
+
+The default reference and current paths intentionally point to the same dataset, so they produce zero drift. Generate a shifted production cohort first:
+
+```bash
+python integrations/make_drift_demo.py
+python integrations/driftwatch_monitor.py \
+  --email student@example.com \
+  --password your-password \
+  --reference data/demo/reference.csv \
+  --current data/demo/current.csv \
+  --current-labels data/demo/current_labels.csv
+```
+
+Use the processed feature files for the connector. The raw CSV contains labels, salary, categorical strings, and a different schema; it is not directly compatible with the saved model.
+
 ##  Project Structure
 ```
 placement-predictor/
