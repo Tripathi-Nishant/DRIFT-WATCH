@@ -114,6 +114,12 @@ tools/             Migration and load-test utilities
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
+The `examples/placement-predictor-demo/` directory is an optional integration
+example used for testing DriftWatch. It is not imported by the package, built
+into the Docker image, or required by the dashboard. DriftWatch can monitor any
+compatible student or startup model through the same reference/current data and
+prediction inputs.
+
 Alerts support Slack/Discord-compatible webhooks with retries. Optional email alerts use `DRIFTWATCH_SMTP_*` variables. Real text embeddings can be enabled with `DRIFTWATCH_EMBEDDING_MODEL`; optional CLIP image embeddings can be enabled with `DRIFTWATCH_IMAGE_EMBEDDING_MODEL` after installing `driftwatch[production]`. These large model dependencies remain opt-in.
 
 ## License

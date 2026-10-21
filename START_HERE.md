@@ -5,7 +5,9 @@ dataset with a current production batch, measures drift and data quality,
 checks optional model performance, and produces an explainable decision such as
 `MONITOR`, `INVESTIGATE`, or `ACT`.
 
-The repository includes a Student Placement Predictor as the main case study.
+The repository includes an optional Student Placement Predictor integration under
+`examples/placement-predictor-demo/`. It is a test client only; it is not part
+of the DriftWatch product or runtime package.
 
 ## 1. Requirements
 
@@ -86,21 +88,22 @@ driftwatch run `
 
 Open `report.html` in a browser.
 
-## 5. Placement Predictor case study
+## 5. Optional placement predictor demo
 
-The case study is in `Placement-Predictor-main`.
+The demo client is in `examples/placement-predictor-demo`. You can skip this
+section when integrating your own model.
 
 Run the prediction app:
 
 ```powershell
-cd C:\Users\HP\Desktop\DRIFTWATCH\Placement-Predictor-main
-..\.venv\Scripts\python.exe -m streamlit run app/app.py
+cd C:\Users\HP\Desktop\DRIFTWATCH\examples\placement-predictor-demo
+..\..\.venv\Scripts\python.exe -m streamlit run app/app.py
 ```
 
 Run the reproducible DriftWatch demonstration:
 
 ```powershell
-..\.venv\Scripts\python.exe integrations/make_drift_demo.py
+..\..\.venv\Scripts\python.exe integrations/make_drift_demo.py
 ```
 
 This creates:
@@ -115,7 +118,7 @@ Submit the demo batch. Use the same email and password you used to register in
 the DriftWatch dashboard:
 
 ```powershell
-..\.venv\Scripts\python.exe integrations/driftwatch_monitor.py `
+..\..\.venv\Scripts\python.exe integrations/driftwatch_monitor.py `
   --email "your-registered-email" `
   --password "your-password" `
   --reference data/demo/reference.csv `
@@ -130,7 +133,7 @@ decision.
 To run it repeatedly on a small server or laptop:
 
 ```powershell
-..\.venv\Scripts\python.exe integrations/watch_driftwatch.py `
+..\..\.venv\Scripts\python.exe integrations/watch_driftwatch.py `
   --email "your-registered-email" `
   --password "your-password" `
   --interval 3600
@@ -182,7 +185,7 @@ npm run test:e2e --prefix dashboard
 Use this order in a presentation:
 
 1. Explain the production problem: a model can become unreliable after data changes.
-2. Show the placement model predicting student placement.
+2. Optionally show the separate placement predictor demo as one client.
 3. Explain reference data versus current production data.
 4. Generate the intentionally shifted demo batch.
 5. Submit it to DriftWatch.
@@ -217,7 +220,7 @@ demonstration.
 Run the model-training notebook or confirm this file exists:
 
 ```text
-Placement-Predictor-main/models/placement_model.pkl
+examples/placement-predictor-demo/models/placement_model.pkl
 ```
 
 ### Dashboard changes do not appear
