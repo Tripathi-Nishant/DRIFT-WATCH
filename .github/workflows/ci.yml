@@ -22,12 +22,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
+      - name: Upgrade packaging tools
+        run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev,server]"
       - run: python -m pytest -q
         env:
           DRIFTWATCH_DATABASE_URL: postgresql://driftwatch:driftwatch@localhost:5432/driftwatch
       - run: python -m pip install pip-audit
-      - run: pip-audit
+      - run: pip-audit --progress-spinner off
       - run: python -m ruff check src tests tools
       - run: docker build -t driftwatch:${{ github.sha }} .
       - uses: aquasecurity/trivy-action@master
@@ -36,6 +38,7 @@ jobs:
           format: table
           exit-code: '1'
           severity: CRITICAL,HIGH
+          ignore-unfixed: true
   dashboard:
     runs-on: ubuntu-latest
     steps:

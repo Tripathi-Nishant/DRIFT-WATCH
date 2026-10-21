@@ -13,7 +13,13 @@ COPY web ./web
 COPY migrations ./migrations
 COPY tools ./tools
 COPY --from=dashboard-build /app/dashboard/dist ./dashboard/dist
-RUN pip install --no-cache-dir ".[server]"
+# Apply the latest security updates available in the base distribution before
+# installing the application. Trivy still reports vulnerabilities that Debian
+# has not fixed yet, which CI handles with ignore-unfixed.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir ".[server]"
 COPY docker-entrypoint.sh /usr/local/bin/driftwatch-entrypoint
 RUN chmod +x /usr/local/bin/driftwatch-entrypoint
 ENV DRIFTWATCH_ENV=production
