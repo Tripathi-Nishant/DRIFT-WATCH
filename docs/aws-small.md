@@ -33,7 +33,11 @@ unauthenticated request to `POST /api/v1/access-requests`; requests are stored
 as `PENDING` and can be approved or rejected by an owner/admin in the Models
 workspace. Set `DRIFTWATCH_ALLOWED_ORIGINS` to the public dashboard origin.
 Approval is currently an operator workflow and does not yet provision accounts
-or send email invitations.
+or send email invitations. Approved requests now receive a one-time invitation
+token in the approval API response; deliver that token through your verified
+email provider or support workflow and have the user submit it to
+`POST /api/v1/auth/accept-invite`. Tokens expire after seven days and can only
+be used once. Never put invitation tokens in logs or analytics.
 
 ## Backups
 

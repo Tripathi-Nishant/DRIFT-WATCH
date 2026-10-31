@@ -88,3 +88,8 @@ def verify_token(token: str, secret: str | None = None) -> dict[str, Any] | None
 def new_api_key() -> tuple[str, str]:
     raw = f"dw_{secrets.token_urlsafe(32)}"
     return raw, hashlib.sha256(raw.encode()).hexdigest()
+
+
+def new_invitation_token() -> tuple[str, str]:
+    raw = f"dw_invite_{secrets.token_urlsafe(32)}"
+    return raw, hashlib.sha256(raw.encode()).hexdigest()

@@ -14,10 +14,10 @@ larger production launch.
 
 The public beta-access workflow is implemented and validated. Visitors can
 request access from the login screen, and authenticated owner/admin users can
-approve or reject pending requests from the Models workspace. Requests are
-persisted in SQLite and PostgreSQL and exposed through the documented API.
-Approval does not yet provision accounts or send email; an invitation-token and
-transactional-email integration is the next launch hardening step.
+approve or reject pending requests from the Models workspace. Approved
+requests receive a one-time, seven-day invitation token which creates the
+user's organization and account through the documented accept-invite endpoint.
+Transactional email delivery remains an operator/provider integration step.
 
 ## 1. Product summary
 

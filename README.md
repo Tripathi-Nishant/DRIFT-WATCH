@@ -332,7 +332,8 @@ See `.env.example` and the deployment documentation for the complete configurati
 The dashboard login screen accepts unauthenticated beta-access requests.
 Deploy the API with PostgreSQL behind TLS, set
 `DRIFTWATCH_ALLOWED_ORIGINS` to the dashboard origin, and review requests in
-the Models workspace. See [the small AWS deployment guide](docs/aws-small.md)
+the Models workspace. Approved requests can be onboarded through the one-time
+invitation endpoint documented in the API. See [the small AWS deployment guide](docs/aws-small.md)
 and [the production checklist](docs/production.md) for launch operations.
 
 Webhook notifications are described as supporting Slack/Discord-compatible endpoints with retries. Validate provider behavior, delivery guarantees, and credentials in your own environment before depending on alerts operationally.

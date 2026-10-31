@@ -363,6 +363,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/ingest/feedback",
             "/api/v1/auth/register",
             "/api/v1/auth/login",
+            "/api/v1/auth/accept-invite",
             "/api/v1/projects",
             "/api/v1/api-keys",
             "/api/v1/datasets",
@@ -391,10 +392,54 @@ class Handler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send(b'{"error":"invalid JSON"}', status=400)
             return
+        if path == "/api/v1/auth/accept-invite":
+            token = body.get("token")
+            password = body.get("password")
+            if not isinstance(token, str) or not isinstance(password, str):
+                self._send(b'{"error":"token and password are required"}', status=400)
+                return
+            try:
+                password_hash = hash_password(password)
+            except ValueError as error:
+                self._send(json.dumps({"error": str(error)}).encode(), status=400)
+                return
+            accepted = STORE.accept_access_invitation(
+                hashlib.sha256(token.encode()).hexdigest(), password_hash
+            )
+            if not accepted:
+                self._send(b'{"error":"invitation is invalid, expired, or already used"}', status=400)
+                return
+            user = accepted["user"]
+            organization = accepted["organization"]
+            access_token = issue_token(user["id"], user["role"], organization["id"])
+            self._send(json.dumps({
+                "user": user,
+                "organization": organization,
+                "access_token": access_token,
+            }).encode(), status=201)
+            return
         if path == "/api/v1/access-requests":
             if not ACCESS_REQUEST_LIMITER.allow(self.client_address[0]):
                 self._send(b'{"error":"too many access requests"}', status=429)
                 return
+            validated = _validate_access_request(body)
+            if not validated:
+                self._send(
+                    b'{"error":"email, organization, and a valid request are required"}',
+                    status=400,
+                )
+                return
+            email, organization, use_case = validated
+            request = STORE.create_access_request(email, organization, use_case)
+            self._send(
+                json.dumps({
+                    "id": request["id"],
+                    "status": request["status"],
+                    "message": "Access request received. We will review it shortly.",
+                }).encode(),
+                status=202,
+            )
+            return
             validated = _validate_access_request(body)
             if not validated:
                 self._send(

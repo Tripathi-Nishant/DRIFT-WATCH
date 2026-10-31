@@ -7,9 +7,11 @@ import os
 import sqlite3
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from .security import new_invitation_token
 
 
 def _now() -> str:
@@ -131,7 +133,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS access_requests (
                     id TEXT PRIMARY KEY, email TEXT NOT NULL, organization TEXT NOT NULL,
                     use_case TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
-                    reviewed_at TEXT, reviewer TEXT
+                    reviewed_at TEXT, reviewer TEXT, invitation_token_hash TEXT,
+                    invitation_expires_at TEXT, invitation_used_at TEXT
                 );
                 """
             )
@@ -152,6 +155,15 @@ class Store:
             ):
                 try:
                     db.execute(f"ALTER TABLE models ADD COLUMN {column} {definition}")
+                except sqlite3.OperationalError:
+                    pass
+            for column in (
+                "invitation_token_hash",
+                "invitation_expires_at",
+                "invitation_used_at",
+            ):
+                try:
+                    db.execute(f"ALTER TABLE access_requests ADD COLUMN {column} TEXT")
                 except sqlite3.OperationalError:
                     pass
 
@@ -182,13 +194,19 @@ class Store:
             ).fetchone()
             if existing:
                 return dict(existing)
-            db.execute("INSERT INTO access_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+            db.execute(
+                "INSERT INTO access_requests "
+                "(id, email, organization, use_case, status, created_at, reviewed_at, reviewer) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                tuple(item.values()),
+            )
         return item
 
     def list_access_requests(self) -> list[dict[str, Any]]:
         with self._connect() as db:
             return [dict(row) for row in db.execute(
-                "SELECT * FROM access_requests ORDER BY created_at DESC"
+                "SELECT id, email, organization, use_case, status, created_at, reviewed_at, reviewer "
+                "FROM access_requests ORDER BY created_at DESC"
             )]
 
     def review_access_request(
@@ -196,16 +214,46 @@ class Store:
     ) -> dict[str, Any] | None:
         if status not in {"APPROVED", "REJECTED"}:
             raise ValueError("status must be APPROVED or REJECTED")
+        invitation_token = None
+        token_hash = None
+        expires_at = None
+        if status == "APPROVED":
+            invitation_token, token_hash = new_invitation_token()
+            expires_at = (datetime.now(UTC) + timedelta(days=7)).isoformat()
         with self._lock, self._connect() as db:
             db.execute(
-                "UPDATE access_requests SET status = ?, reviewed_at = ?, reviewer = ? "
+                "UPDATE access_requests SET status = ?, reviewed_at = ?, reviewer = ?, "
+                "invitation_token_hash = ?, invitation_expires_at = ? "
                 "WHERE id = ? AND status = 'PENDING'",
-                (status, _now(), reviewer, request_id),
+                (status, _now(), reviewer, token_hash, expires_at, request_id),
             )
             row = db.execute(
-                "SELECT * FROM access_requests WHERE id = ?", (request_id,)
+                "SELECT id, email, organization, use_case, status, created_at, reviewed_at, reviewer "
+                "FROM access_requests WHERE id = ?", (request_id,)
             ).fetchone()
-            return dict(row) if row else None
+            return (dict(row) | ({"invitation_token": invitation_token} if invitation_token else {})) if row else None
+
+    def accept_access_invitation(
+        self, token_hash: str, password_hash: str
+    ) -> dict[str, Any] | None:
+        with self._lock, self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM access_requests WHERE invitation_token_hash = ? "
+                "AND status = 'APPROVED' AND invitation_used_at IS NULL "
+                "AND invitation_expires_at > ?",
+                (token_hash, _now()),
+            ).fetchone()
+            if not row:
+                return None
+            organization = self.create_organization(row["organization"])
+            user = self.create_user(
+                row["email"], password_hash, organization["id"]
+            )
+            db.execute(
+                "UPDATE access_requests SET invitation_used_at = ? WHERE id = ?",
+                (_now(), row["id"]),
+            )
+            return {"user": user, "organization": organization}
 
     def create_user(
         self, email: str, password_hash: str, organization_id: str, role: str = "OWNER"
