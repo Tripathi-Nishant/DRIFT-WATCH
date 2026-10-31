@@ -42,7 +42,8 @@ class Store:
                 """
                 CREATE TABLE IF NOT EXISTS models (
                     id TEXT PRIMARY KEY, organization_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL,
-                    model_type TEXT NOT NULL, created_at TEXT NOT NULL,
+                    model_type TEXT NOT NULL, environment TEXT NOT NULL DEFAULT 'production',
+                    lifecycle_status TEXT NOT NULL DEFAULT 'candidate', created_at TEXT NOT NULL,
                     reference_profile TEXT
                 );
                 CREATE TABLE IF NOT EXISTS runs (
@@ -121,6 +122,12 @@ class Store:
                     id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL,
                     seeds TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS incidents (
+                    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, run_id TEXT,
+                    model_id TEXT, title TEXT NOT NULL, severity TEXT NOT NULL,
+                    status TEXT NOT NULL, owner TEXT, detail TEXT NOT NULL,
+                    created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
                 """
             )
             for table, column in (("models", "organization_id"), ("runs", "organization_id")):
@@ -134,6 +141,14 @@ class Store:
                 )
             except sqlite3.OperationalError:
                 pass
+            for column, definition in (
+                ("environment", "TEXT NOT NULL DEFAULT 'production'"),
+                ("lifecycle_status", "TEXT NOT NULL DEFAULT 'candidate'"),
+            ):
+                try:
+                    db.execute(f"ALTER TABLE models ADD COLUMN {column} {definition}")
+                except sqlite3.OperationalError:
+                    pass
 
     def create_organization(self, name: str) -> dict[str, Any]:
         organization = {"id": str(uuid.uuid4()), "name": name, "created_at": _now()}
@@ -395,6 +410,8 @@ class Store:
         model_type: str = "classification",
         reference_profile: dict[str, Any] | None = None,
         organization_id: str | None = None,
+        environment: str = "production",
+        lifecycle_status: str = "candidate",
     ) -> dict[str, Any]:
         model = {
             "id": str(uuid.uuid4()),
@@ -402,13 +419,17 @@ class Store:
             "name": name,
             "version": version,
             "model_type": model_type,
+            "environment": environment,
+            "lifecycle_status": lifecycle_status,
             "created_at": _now(),
         }
         with self._lock, self._connect() as db:
             db.execute(
-                "INSERT INTO models (id, organization_id, name, version, model_type, created_at, reference_profile) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO models (id, organization_id, name, version, model_type, environment, lifecycle_status, created_at, reference_profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    *model.values(),
+                    model["id"], model["organization_id"], model["name"], model["version"],
+                    model["model_type"], model["environment"], model["lifecycle_status"],
+                    model["created_at"],
                     json.dumps(reference_profile) if reference_profile else None,
                 ),
             )
@@ -421,10 +442,33 @@ class Store:
             return [
                 dict(row)
                 for row in db.execute(
-                    f"SELECT id, name, version, model_type, created_at FROM models {where} ORDER BY created_at DESC",
+                    f"SELECT id, name, version, model_type, environment, lifecycle_status, created_at FROM models {where} ORDER BY created_at DESC",
                     params,
                 )
             ]
+
+    def update_model_lifecycle(
+        self, organization_id: str, model_id: str, status: str, environment: str | None = None
+    ) -> dict[str, Any] | None:
+        allowed = {"candidate", "staging", "production", "deprecated"}
+        if status not in allowed:
+            raise ValueError(f"status must be one of {sorted(allowed)}")
+        with self._lock, self._connect() as db:
+            if environment:
+                db.execute(
+                    "UPDATE models SET lifecycle_status = ?, environment = ? WHERE id = ? AND organization_id = ?",
+                    (status, environment, model_id, organization_id),
+                )
+            else:
+                db.execute(
+                    "UPDATE models SET lifecycle_status = ? WHERE id = ? AND organization_id = ?",
+                    (status, model_id, organization_id),
+                )
+            row = db.execute(
+                "SELECT id, name, version, model_type, environment, lifecycle_status, created_at FROM models WHERE id = ? AND organization_id = ?",
+                (model_id, organization_id),
+            ).fetchone()
+            return dict(row) if row else None
 
     def record_run(
         self,
@@ -616,3 +660,45 @@ class Store:
                 params,
             )
             return [dict(row) for row in rows]
+
+    def create_incident(
+        self, organization_id: str, title: str, severity: str, detail: str,
+        run_id: str | None = None, model_id: str | None = None,
+        owner: str | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "organization_id": organization_id,
+            "run_id": run_id, "model_id": model_id, "title": title,
+            "severity": severity, "status": "OPEN", "owner": owner,
+            "detail": detail, "created_at": _now(), "updated_at": _now(),
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO incidents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        return item
+
+    def list_incidents(self, organization_id: str, status: str | None = None) -> list[dict[str, Any]]:
+        where = "organization_id = ?"
+        params: list[Any] = [organization_id]
+        if status:
+            where += " AND status = ?"
+            params.append(status)
+        with self._connect() as db:
+            return [dict(row) for row in db.execute(
+                f"SELECT * FROM incidents WHERE {where} ORDER BY updated_at DESC", tuple(params)
+            )]
+
+    def update_incident(
+        self, organization_id: str, incident_id: str, status: str, owner: str | None = None
+    ) -> dict[str, Any] | None:
+        if status not in {"OPEN", "ACKNOWLEDGED", "RESOLVED"}:
+            raise ValueError("invalid incident status")
+        with self._lock, self._connect() as db:
+            db.execute(
+                "UPDATE incidents SET status = ?, owner = COALESCE(?, owner), updated_at = ? WHERE id = ? AND organization_id = ?",
+                (status, owner, _now(), incident_id, organization_id),
+            )
+            row = db.execute(
+                "SELECT * FROM incidents WHERE id = ? AND organization_id = ?",
+                (incident_id, organization_id),
+            ).fetchone()
+            return dict(row) if row else None

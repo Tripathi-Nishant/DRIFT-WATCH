@@ -42,6 +42,19 @@ def test_store_persists_platform_configuration(tmp_path):
     assert store.list_alert_rules("org")[0]["id"] == rule["id"]
 
 
+def test_model_lifecycle_and_incidents(tmp_path):
+    store = Store(tmp_path / "driftwatch.db")
+    model = store.create_model("checkout", organization_id="org")
+    updated = store.update_model_lifecycle("org", model["id"], "staging", "staging")
+    assert updated["lifecycle_status"] == "staging"
+    assert updated["environment"] == "staging"
+    incident = store.create_incident("org", "Drift spike", "HIGH", "Investigate")
+    assert store.list_incidents("org")[0]["id"] == incident["id"]
+    resolved = store.update_incident("org", incident["id"], "RESOLVED", "owner@example.com")
+    assert resolved["status"] == "RESOLVED"
+    assert resolved["owner"] == "owner@example.com"
+
+
 def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
     from driftwatch.alerts import AlertDispatcher
 

@@ -53,7 +53,7 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS api_keys (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, key_hash TEXT UNIQUE NOT NULL, created_at TEXT NOT NULL, revoked_at TEXT);
                 CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, organization_id TEXT, user_id TEXT, action TEXT NOT NULL, entity_type TEXT, entity_id TEXT, detail TEXT, created_at TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS models (id TEXT PRIMARY KEY, organization_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, model_type TEXT NOT NULL, created_at TEXT NOT NULL, reference_profile JSONB);
+                CREATE TABLE IF NOT EXISTS models (id TEXT PRIMARY KEY, organization_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, model_type TEXT NOT NULL, environment TEXT NOT NULL DEFAULT 'production', lifecycle_status TEXT NOT NULL DEFAULT 'candidate', created_at TEXT NOT NULL, reference_profile JSONB);
                 CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, severity TEXT NOT NULL, decision TEXT NOT NULL, created_at TEXT NOT NULL, report JSONB NOT NULL);
                 CREATE TABLE IF NOT EXISTS predictions (id TEXT PRIMARY KEY, model_id TEXT, prediction TEXT NOT NULL, features JSONB NOT NULL, created_at TEXT NOT NULL, label TEXT);
                 CREATE TABLE IF NOT EXISTS feedback (id TEXT PRIMARY KEY, prediction_id TEXT NOT NULL, label TEXT NOT NULL, created_at TEXT NOT NULL);
@@ -64,9 +64,12 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS schedule_runs (id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, organization_id TEXT NOT NULL, status TEXT NOT NULL, severity TEXT, started_at TEXT NOT NULL, completed_at TEXT, detail TEXT, output_path TEXT);
                 CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, metric TEXT NOT NULL DEFAULT 'drift_rate', created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS research_runs (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL, seeds JSONB NOT NULL, result JSONB NOT NULL, created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, run_id TEXT, model_id TEXT, title TEXT NOT NULL, severity TEXT NOT NULL, status TEXT NOT NULL, owner TEXT, detail TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
                 ALTER TABLE alert_rules ADD COLUMN IF NOT EXISTS metric TEXT NOT NULL DEFAULT 'drift_rate';
+                ALTER TABLE models ADD COLUMN IF NOT EXISTS environment TEXT NOT NULL DEFAULT 'production';
+                ALTER TABLE models ADD COLUMN IF NOT EXISTS lifecycle_status TEXT NOT NULL DEFAULT 'candidate';
                 """
             )
 

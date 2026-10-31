@@ -47,6 +47,8 @@ python -m pytest tests/integration/test_postgres.py -q
 - Restrict `DRIFTWATCH_ALLOWED_ORIGINS` to the dashboard origin.
 - Set `DRIFTWATCH_MAX_BODY_BYTES` to the largest accepted payload.
 - Use API keys only for ingestion and rotate/revoke them.
+- Set `DRIFTWATCH_WEBHOOK_SECRET` so receivers can verify
+  `X-DriftWatch-Signature` with HMAC-SHA256.
 - Audit payloads with `production.redacted`; raw prompts, answers, labels,
   tokens, emails, and contexts should not be placed in logs.
 - Terminate TLS at the reverse proxy and keep PostgreSQL private.

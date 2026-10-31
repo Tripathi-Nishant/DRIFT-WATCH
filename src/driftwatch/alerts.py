@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import smtplib
@@ -81,12 +83,21 @@ class AlertDispatcher:
 
     def _dispatch_webhook(self, run: dict[str, Any], payload: dict[str, Any], retries: int, webhook_url: str):
         status, detail = "failed", "delivery failed"
+        body = json.dumps(payload, separators=(",", ":")).encode()
+        secret = os.getenv("DRIFTWATCH_WEBHOOK_SECRET")
+        signature = (
+            "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+            if secret else None
+        )
         for attempt in range(max(1, retries)):
             try:
                 request = urllib.request.Request(
                     webhook_url,
-                    data=json.dumps(payload).encode(),
-                    headers={"Content-Type": "application/json"},
+                    data=body,
+                    headers={
+                        "Content-Type": "application/json",
+                        **({"X-DriftWatch-Signature": signature} if signature else {}),
+                    },
                     method="POST",
                 )
                 with urllib.request.urlopen(request, timeout=5) as response:

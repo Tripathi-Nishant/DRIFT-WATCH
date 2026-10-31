@@ -228,6 +228,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/research",
             "/api/v1/integration",
             "/api/v1/model-comparison",
+            "/api/v1/incidents",
         }:
             identity = self._identity()
             if not identity:
@@ -251,6 +252,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_alert_rules(identity["org_id"])).encode())
             elif path == "/api/v1/model-comparison":
                 self._send(json.dumps(STORE.compare_models(identity["org_id"])).encode())
+            elif path == "/api/v1/incidents":
+                self._send(json.dumps(STORE.list_incidents(identity["org_id"])).encode())
             elif path == "/api/v1/research":
                 self._send(json.dumps(STORE.list_research_runs(identity["org_id"])).encode())
             elif path == "/api/v1/integration":
@@ -331,7 +334,12 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/datasets",
             "/api/v1/schedules",
             "/api/v1/alert-rules",
-        } and not path.startswith("/api/v1/retraining"):
+            "/api/v1/incidents",
+        } and not (
+            path.startswith("/api/v1/retraining")
+            or path.startswith("/api/v1/models/")
+            or path.startswith("/api/v1/incidents/")
+        ):
             self._send(b"Not found", "text/plain", 404)
             return
         try:
@@ -387,6 +395,37 @@ class Handler(BaseHTTPRequestHandler):
                 request_id,
             )
             self._send(json.dumps(request).encode())
+            return
+        if path.startswith("/api/v1/models/") and path.endswith("/lifecycle"):
+            identity = self._require_write_access()
+            if not identity:
+                return
+            model_id = path.split("/")[-2]
+            try:
+                model = STORE.update_model_lifecycle(
+                    identity["org_id"], model_id, body["status"], body.get("environment")
+                )
+            except ValueError as error:
+                self._send(json.dumps({"error": str(error)}).encode(), status=400)
+                return
+            if not model:
+                self._send(b'{"error":"model not found"}', status=404)
+                return
+            STORE.audit("model.lifecycle.updated", identity["org_id"], identity["sub"], "model", model_id)
+            self._send(json.dumps(model).encode())
+            return
+        if path.startswith("/api/v1/incidents/") and path.endswith(("/acknowledge", "/resolve")):
+            identity = self._require_write_access()
+            if not identity:
+                return
+            incident_id = path.split("/")[-2]
+            status = "ACKNOWLEDGED" if path.endswith("/acknowledge") else "RESOLVED"
+            incident = STORE.update_incident(identity["org_id"], incident_id, status, body.get("owner"))
+            if not incident:
+                self._send(b'{"error":"incident not found"}', status=404)
+                return
+            STORE.audit(f"incident.{status.lower()}", identity["org_id"], identity["sub"], "incident", incident_id)
+            self._send(json.dumps(incident).encode())
             return
         if path in {
             "/api/ingest/predictions",
@@ -505,6 +544,20 @@ class Handler(BaseHTTPRequestHandler):
                         body.get("model_type", "classification"),
                         body.get("reference_profile"),
                         identity["org_id"],
+                        body.get("environment", "production"),
+                        body.get("lifecycle_status", "candidate"),
+                    )
+                ).encode(),
+                status=201,
+            )
+            return
+        if path == "/api/v1/incidents":
+            self._send(
+                json.dumps(
+                    STORE.create_incident(
+                        identity["org_id"], body["title"], body.get("severity", "HIGH"),
+                        body.get("detail", ""), body.get("run_id"), body.get("model_id"),
+                        body.get("owner"),
                     )
                 ).encode(),
                 status=201,
