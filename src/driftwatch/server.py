@@ -115,6 +115,17 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+        if os.getenv("DRIFTWATCH_ENV", "development").lower() == "production":
+            self.send_header(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
@@ -132,6 +143,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(b'{"error":"rate limit exceeded"}', status=429)
             return
         if path == "/api/demo":
+            if os.getenv("DRIFTWATCH_ENV", "development").lower() == "production":
+                self._send(b'{"error":"demo endpoint is disabled in production"}', status=404)
+                return
             ref, cur = demo_datasets()
             result = Monitor.from_reference(ref, model_name="demo-checkout").run(cur)
             run = STORE.record_run(result.to_dict())
@@ -154,9 +168,10 @@ class Handler(BaseHTTPRequestHandler):
                 with STORE._connect() as db:
                     db.execute("SELECT 1").fetchone()
                 self._send(json.dumps({"status": "ready"}).encode())
-            except Exception as error:
+            except Exception:
+                LOGGER.exception("readiness probe failed")
                 self._send(
-                    json.dumps({"status": "not_ready", "error": str(error)}).encode(),
+                    b'{"status":"not_ready"}',
                     status=503,
                 )
             return

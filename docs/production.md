@@ -28,6 +28,12 @@ container compose file starts PostgreSQL with a health check and exposes:
 - `/readyz`: database readiness
 - `/api/v1/metrics`: metric catalog
 
+The production image runs as an unprivileged `driftwatch` user, includes a
+container health check, and disables the demo endpoint. Put it behind a TLS
+reverse proxy such as the provided Caddy configuration; do not expose
+PostgreSQL publicly. Set `DRIFTWATCH_ALLOWED_ORIGINS` to the exact dashboard
+origin rather than using a wildcard.
+
 The integration test runs when `DRIFTWATCH_DATABASE_URL` is present:
 
 ```powershell
@@ -44,6 +50,10 @@ python -m pytest tests/integration/test_postgres.py -q
 - Audit payloads with `production.redacted`; raw prompts, answers, labels,
   tokens, emails, and contexts should not be placed in logs.
 - Terminate TLS at the reverse proxy and keep PostgreSQL private.
+- Keep `DRIFTWATCH_SECRET_KEY` stable across restarts and rotate it only with a
+  planned token invalidation window.
+- Use `restart: unless-stopped` and monitor `/readyz`; `/healthz` only confirms
+  that the process is alive.
 
 ## Load testing
 
