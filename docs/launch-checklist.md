@@ -16,6 +16,10 @@
 - Alert on 5xx responses, failed schedule runs, database saturation, and backup failures.
 - Run `tools/backup_postgres.py` daily and perform a monthly restore drill.
 - Configure an error tracker or OpenTelemetry collector at the reverse proxy/host.
+- Install the optional `stripe` extra and configure Stripe price IDs only when
+  billing is enabled.
+- Use `python tools/load_test.py --url https://YOUR_DOMAIN/healthz` to establish
+  p50/p95 and error-rate baselines before adding replicas.
 
 ## Commercial readiness
 
@@ -27,6 +31,14 @@ before enabling paid plans.
 The current beta exposes `GET /api/v1/usage` with counts, configured limits,
 remaining capacity, and exceeded resources. Configure the quota environment
 variables per deployment and connect this endpoint to billing before charging.
+Prediction ingestion and monitoring runs return `402` when configured quotas
+are exceeded.
+
+## Integrator APIs
+
+The typed Python client is available through `driftwatch.client.DriftWatchClient`
+and typed response dictionaries in `driftwatch.models`. The OpenAPI document is
+available at `/openapi.json` for generating clients in other languages.
 
 ## Release
 

@@ -4,10 +4,45 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 import time
 from collections import Counter
 from typing import Any
+
+
+def configure_optional_telemetry() -> None:
+    """Enable Sentry and basic OpenTelemetry only when configured."""
+    dsn = os.getenv("DRIFTWATCH_SENTRY_DSN")
+    if not dsn:
+        return
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=dsn,
+            traces_sample_rate=float(os.getenv("DRIFTWATCH_SENTRY_TRACES", "0.1")),
+        )
+    except ImportError:
+        logging.getLogger("driftwatch").warning(
+            "Sentry DSN configured but sentry-sdk is not installed"
+        )
+    if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        try:
+            from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter,
+            )
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+            provider = TracerProvider(resource=Resource.create({"service.name": "driftwatch-api"}))
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+            trace.set_tracer_provider(provider)
+        except ImportError:
+            logging.getLogger("driftwatch").warning(
+                "OTLP endpoint configured but OpenTelemetry packages are not installed"
+            )
 
 
 class Metrics:

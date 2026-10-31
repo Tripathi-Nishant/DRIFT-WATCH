@@ -8,6 +8,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .models import UsageSummary
+
 
 class DriftWatchError(RuntimeError):
     """Raised when the DriftWatch API rejects a request."""
@@ -131,6 +133,10 @@ class DriftWatchClient:
         return self._request(
             "/api/ingest/feedback", {"prediction_id": prediction_id, "label": label}
         )
+
+    def usage(self) -> UsageSummary:
+        """Return organization usage and quota status."""
+        return self._request("/api/v1/usage")
 
 
 def _records(value: Any) -> list[dict[str, Any]]:

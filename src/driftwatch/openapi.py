@@ -96,6 +96,13 @@ API_SPEC = {
         "/api/v1/usage": {
             "get": {"summary": "Get organization usage and quota status", "security": [{"bearerAuth": []}]},
         },
+        "/api/v1/billing": {
+            "get": {"summary": "Get organization billing status", "security": [{"bearerAuth": []}]},
+        },
+        "/api/v1/billing/checkout": {
+            "post": {"summary": "Create a Stripe subscription checkout session", "security": [{"bearerAuth": []}]},
+        },
+        "/api/v1/billing/webhook": {"post": {"summary": "Receive a signed Stripe webhook"}},
         "/api/v1/research": {
             "get": {"summary": "List reproducible benchmark runs", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Run a seeded research benchmark", "security": [{"bearerAuth": []}]},

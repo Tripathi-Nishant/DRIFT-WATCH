@@ -18,10 +18,11 @@ import numpy as np
 import pandas as pd
 
 from .alerts import AlertDispatcher
+from .billing import create_checkout_session, parse_webhook
 from .metrics import metric_catalog
 from .monitor import demo_datasets
 from .notifications import send_invitation
-from .observability import Metrics, log_event
+from .observability import Metrics, configure_optional_telemetry, log_event
 from .openapi import API_SPEC
 from .pipeline import Monitor
 from .production import GeminiLLMJudge, RateLimiter, allowed_origins, max_body_bytes
@@ -53,6 +54,7 @@ def _store():
 
 
 STORE = _store()
+configure_optional_telemetry()
 ALERTS = AlertDispatcher(STORE)
 METRICS = Metrics()
 LIMITER = RateLimiter(
@@ -85,6 +87,11 @@ def _validate_access_request(body: Any) -> tuple[str, str, str] | None:
     ):
         return None
     return email, organization, use_case
+
+
+def _quota_exceeded(organization_id: str, resource: str, additional: int = 1) -> bool:
+    summary = STORE.usage_summary(organization_id)
+    return summary["usage"][resource] + additional > summary["limits"][resource]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -258,6 +265,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/incidents",
             "/api/v1/api-keys",
             "/api/v1/usage",
+            "/api/v1/billing",
             "/api/v1/access-requests",
         }:
             identity = self._identity()
@@ -288,6 +296,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_api_keys(identity["org_id"])).encode())
             elif path == "/api/v1/usage":
                 self._send(json.dumps(STORE.usage_summary(identity["org_id"])).encode())
+            elif path == "/api/v1/billing":
+                self._send(json.dumps(STORE.get_billing_account(identity["org_id"]) or {
+                    "plan": "beta", "status": "inactive"
+                }).encode())
             elif path == "/api/v1/access-requests":
                 if identity.get("role") not in {"OWNER", "ADMIN"}:
                     self._send(b'{"error":"insufficient role"}', status=403)
@@ -376,6 +388,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/alert-rules",
             "/api/v1/incidents",
             "/api/v1/access-requests",
+            "/api/v1/billing/checkout",
+            "/api/v1/billing/webhook",
         } and not (
             path.startswith("/api/v1/retraining")
             or path.startswith("/api/v1/models/")
@@ -392,8 +406,9 @@ class Handler(BaseHTTPRequestHandler):
         if length <= 0 or length > max_body_bytes():
             self._send(b'{"error":"request body too large or empty"}', status=413)
             return
+        raw_body = self.rfile.read(length)
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(raw_body)
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send(b'{"error":"invalid JSON"}', status=400)
             return
@@ -422,6 +437,35 @@ class Handler(BaseHTTPRequestHandler):
                 "organization": organization,
                 "access_token": access_token,
             }).encode(), status=201)
+            return
+        if path == "/api/v1/billing/webhook":
+            signature = self.headers.get("Stripe-Signature", "")
+            try:
+                event = parse_webhook(raw_body, signature)
+                data = event.get("data", {}).get("object", {})
+                metadata = data.get("metadata", {})
+                if metadata.get("organization_id"):
+                    STORE.save_billing_account(
+                        metadata["organization_id"], data.get("customer"),
+                        data.get("subscription"), metadata.get("plan", "beta"),
+                        event.get("type", "active"),
+                    )
+                self._send(b'{"received":true}')
+            except (RuntimeError, ValueError, TypeError) as error:
+                self._send(json.dumps({"error": str(error)}).encode(), status=400)
+            return
+        if path == "/api/v1/billing/checkout":
+            identity = self._require_write_access()
+            if not identity:
+                return
+            try:
+                session = create_checkout_session(
+                    identity["org_id"], body.get("plan", "pro"),
+                    body["success_url"], body["cancel_url"],
+                )
+                self._send(json.dumps({"url": session.url, "id": session.id}).encode(), status=201)
+            except (RuntimeError, KeyError) as error:
+                self._send(json.dumps({"error": str(error)}).encode(), status=503)
             return
         if path == "/api/v1/access-requests":
             if not ACCESS_REQUEST_LIMITER.allow(self.client_address[0]):
@@ -687,6 +731,9 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         if path == "/api/ingest/predictions":
+            if _quota_exceeded(identity["org_id"], "predictions", len(body.get("predictions", []))):
+                self._send(b'{"error":"prediction quota exceeded"}', status=402)
+                return
             ids = STORE.add_predictions(
                 body.get("model_id"), body.get("predictions", [])
             )
@@ -746,6 +793,9 @@ class Handler(BaseHTTPRequestHandler):
                     "available": False,
                     "reason": "GEMINI_API_KEY is not configured",
                 }
+        if _quota_exceeded(identity["org_id"], "runs"):
+            self._send(b'{"error":"monitoring run quota exceeded"}', status=402)
+            return
         run = STORE.record_run(report, body.get("model_id"), identity["org_id"])
         profile = report.get("profile", {})
         fingerprint = profile.get("fingerprint", report["summary"].get("reference_profile", ""))

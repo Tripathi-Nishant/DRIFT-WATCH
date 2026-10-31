@@ -136,6 +136,11 @@ class Store:
                     reviewed_at TEXT, reviewer TEXT, invitation_token_hash TEXT,
                     invitation_expires_at TEXT, invitation_used_at TEXT
                 );
+                CREATE TABLE IF NOT EXISTS billing_accounts (
+                    organization_id TEXT PRIMARY KEY, customer_id TEXT, subscription_id TEXT,
+                    plan TEXT NOT NULL DEFAULT 'beta', status TEXT NOT NULL DEFAULT 'inactive',
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             for table, column in (("models", "organization_id"), ("runs", "organization_id")):
@@ -502,6 +507,28 @@ class Store:
             "remaining": {key: max(0, limits[key] - usage[key]) for key in usage},
             "exceeded": [key for key in usage if usage[key] >= limits[key]],
         }
+
+    def save_billing_account(
+        self, organization_id: str, customer_id: str | None, subscription_id: str | None,
+        plan: str, status: str
+    ) -> dict[str, Any]:
+        item = {
+            "organization_id": organization_id, "customer_id": customer_id,
+            "subscription_id": subscription_id, "plan": plan, "status": status, "updated_at": _now()
+        }
+        with self._lock, self._connect() as db:
+            db.execute(
+                "INSERT OR REPLACE INTO billing_accounts VALUES (?, ?, ?, ?, ?, ?)",
+                tuple(item.values()),
+            )
+        return item
+
+    def get_billing_account(self, organization_id: str) -> dict[str, Any] | None:
+        with self._connect() as db:
+            row = db.execute(
+                "SELECT * FROM billing_accounts WHERE organization_id = ?", (organization_id,)
+            ).fetchone()
+            return dict(row) if row else None
 
     def revoke_api_key(self, organization_id: str, key_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as db:
