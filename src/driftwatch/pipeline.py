@@ -37,6 +37,7 @@ from .decision import DecisionConfig, evaluate_decision
 from .metrics import (
     data_quality_metrics,
     prediction_quality_metrics,
+    registered_metrics,
     run_tests,
     text_metrics,
 )
@@ -60,6 +61,7 @@ class ReferenceProfile:
     rows: int
     created_at: str
     engine_version: str = "0.2.0"
+    fingerprint: str = ""
 
     @classmethod
     def from_dataframe(cls, data: pd.DataFrame) -> ReferenceProfile:
@@ -98,11 +100,19 @@ class ReferenceProfile:
                     .items()
                 }
             schema[name] = info
-        return cls(
+        profile = cls(
             schema=schema,
             rows=len(data),
             created_at=pd.Timestamp.now(tz="UTC").isoformat(),
         )
+        profile.fingerprint = hashlib.sha256(
+            json.dumps(
+                {"schema": profile.schema, "rows": profile.rows},
+                sort_keys=True,
+                default=_jsonable,
+            ).encode()
+        ).hexdigest()[:16]
+        return profile
 
     def save(self, path: str | Path) -> None:
         Path(path).write_text(
@@ -411,6 +421,7 @@ class Monitor:
                 "low_confidence": decision["low_confidence"],
                 "quality_score": quality["score"],
                 "config_hash": config_hash,
+                "reference_profile": self.profile.fingerprint,
                 "recommendation": decision["recommendation"],
                 "recommendation_type": decision["recommendation_type"],
                 "reasons": decision["reasons"],
@@ -465,6 +476,11 @@ class Monitor:
             base["llm_metrics"] = llm_metrics(llm_records)
         if rag_records is not None:
             base["rag_metrics"] = rag_metrics(rag_records)
+        custom_metrics = {}
+        for name, function in registered_metrics().items():
+            custom_metrics[name] = _jsonable(function(reference_features, current_features))
+        if custom_metrics:
+            base["custom_metrics"] = custom_metrics
         base["tests"] = run_tests(base)
         if (
             group_by

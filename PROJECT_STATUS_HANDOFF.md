@@ -205,6 +205,10 @@ Baseline support exists for:
 - Transparent token-overlap LLM relevance and groundedness metrics
 - RAG retrieval hit rate and context precision
 - Optional governed Gemini LLM judge integration
+- Project-specific metric plugins via `register_metric`, with report output and
+  API catalog discovery
+- Deterministic reference-profile fingerprints for tying runs to a reference
+  schema and row shape
 
 These multimodal and LLM capabilities are baselines or adapters. They are not
 equivalent to a calibrated production computer-vision model or a fully
@@ -446,10 +450,11 @@ security upgrades before installing the runtime package.
   deployment/environment driven.
 - Add first-class project/model selection to the dashboard analysis form.
 - Add interactive drill-down from heatmap cells directly into a selected run.
-- Add trend filters by model, project, severity, and date range.
-- Add dataset/profile versioning and explicit reference-window management.
+- Add dashboard controls that use the API's model, project, severity, and date
+  range filters.
+- Add persisted dataset/profile version history and explicit reference-window
+  management beyond the current deterministic profile fingerprint.
 - Add scheduled dashboard jobs with visible schedules and run history.
-- Add a formal plugin/metric registration API for third-party metrics.
 
 ### Provider and research work remaining
 

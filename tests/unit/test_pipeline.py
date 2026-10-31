@@ -1,6 +1,12 @@
 import pandas as pd
 
-from driftwatch import Monitor, ReferenceProfile
+from driftwatch import (
+    Monitor,
+    ReferenceProfile,
+    metric_catalog,
+    register_metric,
+    unregister_metric,
+)
 
 
 def test_monitor_adds_decision_quality_and_recommendation():
@@ -25,6 +31,24 @@ def test_reference_profile_round_trip(tmp_path):
     loaded = ReferenceProfile.load(profile_path)
     assert loaded.rows == 3
     assert loaded.schema["x"]["kind"] == "numeric"
+    assert len(loaded.fingerprint) == 16
+
+
+def test_registered_metric_is_included_in_report():
+    register_metric(
+        "mean_gap",
+        lambda reference, current: current["x"].mean() - reference["x"].mean(),
+        family="custom",
+        kind="numeric",
+    )
+    try:
+        result = Monitor.from_reference(pd.DataFrame({"x": [1, 2, 3]})).run(
+            pd.DataFrame({"x": [3, 4, 5]})
+        )
+        assert result.report["custom_metrics"]["mean_gap"] == 2.0
+        assert any(metric["id"] == "mean_gap" for metric in metric_catalog())
+    finally:
+        unregister_metric("mean_gap")
 
 
 def test_html_report_contains_explanations_and_secondary_statistics(tmp_path):

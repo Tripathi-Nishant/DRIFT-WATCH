@@ -10,7 +10,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 import pandas as pd
@@ -121,7 +121,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         started = time.perf_counter()
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
         if path == "/metrics":
             self._send(METRICS.prometheus().encode(), "text/plain; version=0.0.4")
             return
@@ -161,7 +162,25 @@ class Handler(BaseHTTPRequestHandler):
             identity = self._require_read_access()
             if not identity:
                 return
-            self._send(json.dumps(STORE.list_runs(organization_id=identity["org_id"])).encode())
+            query = parse_qs(parsed.query)
+            try:
+                limit = int(query.get("limit", ["30"])[0])
+            except ValueError:
+                self._send(b'{"error":"limit must be an integer"}', status=400)
+                return
+            self._send(
+                json.dumps(
+                    STORE.list_runs(
+                        organization_id=identity["org_id"],
+                        limit=limit,
+                        model_id=query.get("model_id", [None])[0],
+                        severity=query.get("severity", [None])[0],
+                        decision=query.get("decision", [None])[0],
+                        created_after=query.get("created_after", [None])[0],
+                        created_before=query.get("created_before", [None])[0],
+                    )
+                ).encode()
+            )
             return
         if path == "/api/models":
             identity = self._require_read_access()

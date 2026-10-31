@@ -94,7 +94,34 @@ Review monitoring results through the web dashboard or generate a self-contained
 
 ## How it fits together
 
-```mermaid
+```
+
+### Add project-specific metrics
+
+DriftWatch supports a small plugin surface for metrics that should travel with
+your monitoring report without requiring a fork:
+
+```python
+from driftwatch import Monitor, register_metric
+
+register_metric(
+    "segment_balance",
+    lambda reference, current: abs(
+        reference["segment"].value_counts(normalize=True).get("premium", 0)
+        - current["segment"].value_counts(normalize=True).get("premium", 0)
+    ),
+    family="governance",
+    kind="dataset",
+)
+
+result = Monitor.from_reference(reference_df).run(current_df)
+print(result.report["custom_metrics"]["segment_balance"])
+```
+
+Registered metrics are listed by `/api/v1/metrics` and are evaluated against
+the feature frames used by each run. Reference profiles also receive a stable
+fingerprint, so reports can be tied to the exact reference schema and row
+shape used for comparison.mermaid
 flowchart LR
     A[Reference Data] --> D[DriftWatch Analysis]
     B[Current Data] --> D

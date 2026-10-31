@@ -14,3 +14,17 @@ def test_store_persists_models_runs_predictions_and_feedback(tmp_path):
     assert store.add_feedback(ids[0], 1)
     alert = store.record_alert(run["id"], "webhook", "skipped", "not configured")
     assert store.list_alerts()[0]["id"] == alert["id"]
+
+
+def test_store_filters_run_history(tmp_path):
+    store = Store(tmp_path / "driftwatch.db")
+    first = store.record_run(
+        {"summary": {"severity": "HIGH", "decision": "ACT"}},
+        model_id="model-a",
+    )
+    store.record_run(
+        {"summary": {"severity": "NORMAL", "decision": "IGNORE"}},
+        model_id="model-b",
+    )
+    filtered = store.list_runs(model_id="model-a", severity="HIGH", decision="ACT")
+    assert [item["id"] for item in filtered] == [first["id"]]

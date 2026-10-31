@@ -28,6 +28,9 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Vector storage | Optional adapter | Qdrant REST adapter with organization-scoped upserts and searches; deployment must provide and validate a Qdrant cluster. |
 | Distributed ingestion | Optional adapter | Redis-backed queue plus bounded local queue; deployment must provide Redis persistence and worker supervision. |
 | Statistical calibration against Evidently | In progress | The benchmark runner is present; matched-method validation is still required. |
+| Project metric plugins | Implemented | Register Python callables for domain-specific metrics; results and catalog metadata are included in reports/API discovery. |
+| Reference profile identity | Implemented | Every in-memory reference profile has a deterministic fingerprint derived from schema summaries and row count. |
+| Filtered run history | Implemented | API and storage support model, severity, decision, time-window, and bounded result filters. |
 
 Evidently remains the stronger general-purpose monitoring framework. DriftWatch now
 has a metric-family architecture, governed provider adapters, tenant-aware storage,

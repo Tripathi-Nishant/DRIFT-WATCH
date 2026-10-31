@@ -7,11 +7,48 @@ integrations that want Evidently-style metric/test primitives.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 import pandas as pd
 from scipy.stats import ks_2samp
+
+_CUSTOM_METRICS: dict[str, dict[str, Any]] = {}
+
+
+def register_metric(
+    name: str,
+    function: Callable[[pd.DataFrame, pd.DataFrame], Any],
+    *,
+    family: str = "custom",
+    kind: str = "dataset",
+    description: str = "",
+) -> None:
+    """Register a project-specific metric evaluated on reference/current data."""
+    normalized = name.strip()
+    if not normalized or not normalized.replace("_", "").isalnum():
+        raise ValueError("Metric names must contain letters, numbers, and underscores.")
+    if normalized in {"psi", "ks_statistic", "accuracy"}:
+        raise ValueError(f"Metric name is reserved: {normalized}")
+    if not callable(function):
+        raise TypeError("Metric function must be callable.")
+    _CUSTOM_METRICS[normalized] = {
+        "function": function,
+        "family": family,
+        "kind": kind,
+        "description": description,
+    }
+
+
+def unregister_metric(name: str) -> None:
+    """Remove a previously registered custom metric."""
+    _CUSTOM_METRICS.pop(name, None)
+
+
+def registered_metrics() -> dict[str, Callable[[pd.DataFrame, pd.DataFrame], Any]]:
+    """Return a copy of registered metric callables for pipeline execution."""
+    return {name: item["function"] for name, item in _CUSTOM_METRICS.items()}
 
 
 def _round(value: Any, digits: int = 6) -> Any:
@@ -189,7 +226,7 @@ def run_tests(
 
 def metric_catalog() -> list[dict[str, str]]:
     """List supported metric families for UI/API discovery."""
-    return [
+    builtins = [
         {"id": "psi", "family": "drift", "kind": "numeric"},
         {"id": "ks_statistic", "family": "drift", "kind": "numeric"},
         {"id": "ks_p_value", "family": "drift", "kind": "numeric"},
@@ -232,4 +269,13 @@ def metric_catalog() -> list[dict[str, str]]:
         {"id": "citation_coverage", "family": "llm", "kind": "generation"},
         {"id": "retrieval_hit_rate", "family": "rag", "kind": "retrieval"},
         {"id": "context_precision", "family": "rag", "kind": "retrieval"},
+    ]
+    return builtins + [
+        {
+            "id": name,
+            "family": item["family"],
+            "kind": item["kind"],
+            "description": item["description"],
+        }
+        for name, item in _CUSTOM_METRICS.items()
     ]

@@ -9,7 +9,12 @@ from .advanced_metrics import (
 )
 from .client import DriftWatchClient, DriftWatchError
 from .decision import DecisionConfig
-from .metrics import metric_catalog
+from .metrics import (
+    metric_catalog,
+    register_metric,
+    registered_metrics,
+    unregister_metric,
+)
 from .monitor import analyze, demo_datasets
 from .multimodal import analyze as analyze_multimodal
 from .multimodal import analyze_images, analyze_text, load_image_batch
@@ -29,6 +34,9 @@ __all__ = [
     "analyze",
     "demo_datasets",
     "metric_catalog",
+    "register_metric",
+    "unregister_metric",
+    "registered_metrics",
     "QdrantVectorStore",
     "GeminiLLMJudge",
     "semantic_text_metrics",

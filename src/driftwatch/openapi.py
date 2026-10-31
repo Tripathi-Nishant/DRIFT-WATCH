@@ -41,7 +41,20 @@ API_SPEC = {
                 "security": [{"ingestionKey": []}],
             }
         },
-        "/api/runs": {"get": {"summary": "List monitoring runs", "security": [{"bearerAuth": []}]}},
+        "/api/runs": {
+            "get": {
+                "summary": "List monitoring runs with optional filters",
+                "security": [{"bearerAuth": []}],
+                "parameters": [
+                    {"name": "limit", "in": "query", "schema": {"type": "integer", "maximum": 100}},
+                    {"name": "model_id", "in": "query", "schema": {"type": "string"}},
+                    {"name": "severity", "in": "query", "schema": {"type": "string"}},
+                    {"name": "decision", "in": "query", "schema": {"type": "string"}},
+                    {"name": "created_after", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+                    {"name": "created_before", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+                ],
+            }
+        },
         "/api/alerts": {"get": {"summary": "List alert delivery attempts", "security": [{"bearerAuth": []}]}},
         "/api/v1/retraining": {"get": {"summary": "List retraining requests", "security": [{"bearerAuth": []}]}},
     },

@@ -283,13 +283,40 @@ class Store:
             "report": report
         }
 
-    def list_runs(self, limit: int = 30, organization_id: str | None = None) -> list[dict[str, Any]]:
+    def list_runs(
+        self,
+        limit: int = 30,
+        organization_id: str | None = None,
+        *,
+        model_id: str | None = None,
+        severity: str | None = None,
+        decision: str | None = None,
+        created_after: str | None = None,
+        created_before: str | None = None,
+    ) -> list[dict[str, Any]]:
         with self._connect() as db:
-            where = "WHERE organization_id = ?" if organization_id else ""
-            params = (organization_id, max(1, min(limit, 100))) if organization_id else (max(1, min(limit, 100)),)
+            clauses = []
+            params: list[Any] = []
+            for column, value in (
+                ("organization_id", organization_id),
+                ("model_id", model_id),
+                ("severity", severity),
+                ("decision", decision),
+            ):
+                if value:
+                    clauses.append(f"{column} = ?")
+                    params.append(value)
+            if created_after:
+                clauses.append("created_at >= ?")
+                params.append(created_after)
+            if created_before:
+                clauses.append("created_at <= ?")
+                params.append(created_before)
+            where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            params.append(max(1, min(limit, 100)))
             rows = db.execute(
                 f"SELECT id, model_id, severity, decision, created_at, report FROM runs {where} ORDER BY created_at DESC LIMIT ?",
-                params,
+                tuple(params),
             )
             return [{**dict(row), "report": _decode_json(row["report"])} for row in rows]
 
