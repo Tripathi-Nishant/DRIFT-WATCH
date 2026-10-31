@@ -40,3 +40,17 @@ def test_store_persists_platform_configuration(tmp_path):
     assert store.list_dataset_versions("org")[0]["id"] == dataset["id"]
     assert store.list_schedules("org")[0]["id"] == schedule["id"]
     assert store.list_alert_rules("org")[0]["id"] == rule["id"]
+
+
+def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
+    from driftwatch.alerts import AlertDispatcher
+
+    store = Store(tmp_path / "driftwatch.db")
+    store.create_alert_rule("org", "Critical only", "CRITICAL", "webhook")
+    run = store.record_run(
+        {"summary": {"severity": "HIGH", "decision": "ACT", "model": "checkout"}},
+        organization_id="org",
+    )
+    result = AlertDispatcher(store).dispatch(run)
+    assert result["status"] == "skipped"
+    assert "No enabled rule" in result["detail"]

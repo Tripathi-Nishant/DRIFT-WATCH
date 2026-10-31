@@ -445,9 +445,8 @@ security upgrades before installing the runtime package.
 - Publish a stable release to PyPI.
 - Add a versioned SDK release and typed API models.
 - Add full OpenAPI request/response schemas and generated clients.
-- Add dashboard configuration for alert thresholds, destinations, and retry
-  policy; the current alert page shows delivery history, while configuration is
-  deployment/environment driven.
+- Add threshold-aware alert-rule evaluation for metric-specific policies; current
+  rules enforce severity and channel/destination selection.
 - Add first-class project/model selection to the dashboard analysis form.
 - Add interactive drill-down from heatmap cells directly into a selected run.
 - Add dashboard controls that use the API's model, project, severity, and date
@@ -455,8 +454,6 @@ security upgrades before installing the runtime package.
 - Add schedule execution worker supervision and run history links for each
   configured schedule.
 - Add dataset upload/version promotion workflows beyond metadata registration.
-- Add alert-rule evaluation wiring so configured rules control dispatch
-  destinations and thresholds.
 
 ### Provider and research work remaining
 

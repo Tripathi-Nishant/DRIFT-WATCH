@@ -35,6 +35,8 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Monitoring schedules | Implemented | Dashboard and API manage hourly/daily/weekly schedules; execution can use the existing local scheduler or a supervised worker. |
 | Alert-rule configuration | Implemented | Organization-scoped severity, channel, destination, and threshold policies are persisted and auditable. |
 | Multi-model comparison | Implemented | Aggregated run count, average drift, average quality, and latest-run comparison is available in the Operations workspace. |
+| Rule-aware alert dispatch | Implemented | Matching organization rules control webhook/email delivery; unmatched severities are recorded as skipped rather than silently delivered. |
+| Automatic dataset lineage | Implemented | API analyses register reference/current versions with fingerprints, dimensions, and originating run metadata. |
 
 Evidently remains the stronger general-purpose monitoring framework. DriftWatch now
 has a metric-family architecture, governed provider adapters, tenant-aware storage,

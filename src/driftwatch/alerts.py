@@ -21,7 +21,8 @@ class AlertDispatcher:
 
     def dispatch(self, run: dict[str, Any], retries: int = 3) -> dict[str, Any] | None:
         summary = run["report"]["summary"]
-        if summary.get("severity") not in {"HIGH", "CRITICAL"}:
+        severity = summary.get("severity")
+        if severity not in {"HIGH", "CRITICAL"}:
             return None
         payload = {
             "event": "driftwatch.alert",
@@ -32,21 +33,31 @@ class AlertDispatcher:
             "recommendation": summary.get("recommendation"),
             "reasons": summary.get("reasons", []),
         }
-        if not self.webhook_url:
+        rules = self.store.list_alert_rules(run.get("organization_id")) if run.get("organization_id") else []
+        matching = [
+            rule for rule in rules
+            if rule["enabled"] and rule["severity"] in {severity, "ALL"}
+        ]
+        if rules and not matching:
+            return self.store.record_alert(run["id"], "rules", "skipped", f"No enabled rule matches {severity}")
+        rule = next((item for item in matching if item["channel"] == "webhook"), None)
+        webhook_url = (rule or {}).get("destination") or self.webhook_url
+        if not webhook_url:
             webhook_result = self.store.record_alert(
                 run["id"], "webhook", "skipped", "Webhook URL is not configured"
             )
         else:
-            webhook_result = self._dispatch_webhook(run, payload, retries)
-        self._dispatch_email(run, payload, retries)
+            webhook_result = self._dispatch_webhook(run, payload, retries, webhook_url)
+        if not matching or any(item["channel"] == "email" for item in matching):
+            self._dispatch_email(run, payload, retries)
         return webhook_result
 
-    def _dispatch_webhook(self, run: dict[str, Any], payload: dict[str, Any], retries: int):
+    def _dispatch_webhook(self, run: dict[str, Any], payload: dict[str, Any], retries: int, webhook_url: str):
         status, detail = "failed", "delivery failed"
         for attempt in range(max(1, retries)):
             try:
                 request = urllib.request.Request(
-                    self.webhook_url,
+                    webhook_url,
                     data=json.dumps(payload).encode(),
                     headers={"Content-Type": "application/json"},
                     method="POST",

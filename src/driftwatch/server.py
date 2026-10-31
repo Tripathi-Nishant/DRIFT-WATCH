@@ -503,6 +503,23 @@ class Handler(BaseHTTPRequestHandler):
                     "reason": "GEMINI_API_KEY is not configured",
                 }
         run = STORE.record_run(report, body.get("model_id"), identity["org_id"])
+        profile = report.get("profile", {})
+        fingerprint = profile.get("fingerprint", report["summary"].get("reference_profile", ""))
+        STORE.create_dataset_version(
+            identity["org_id"], f"{report['summary'].get('model', 'model')}-reference",
+            fingerprint or "unversioned", "reference", len(reference), len(reference.columns),
+            fingerprint or "unversioned", body.get("model_id"),
+            {"source": "analysis", "run_id": run["id"]},
+        )
+        current_fingerprint = hashlib.sha256(
+            json.dumps(current.to_dict(orient="list"), sort_keys=True, default=str).encode()
+        ).hexdigest()[:16]
+        STORE.create_dataset_version(
+            identity["org_id"], f"{report['summary'].get('model', 'model')}-current",
+            current_fingerprint, "current", len(current), len(current.columns),
+            current_fingerprint, body.get("model_id"),
+            {"source": "analysis", "run_id": run["id"]},
+        )
         ALERTS.dispatch(run)
         self._send(json.dumps(run["report"]).encode())
 
