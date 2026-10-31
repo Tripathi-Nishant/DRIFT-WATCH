@@ -7,6 +7,7 @@ from .advanced_metrics import (
     ranking_metrics,
     semantic_text_metrics,
 )
+from .client import DriftWatchClient, DriftWatchError
 from .decision import DecisionConfig
 from .metrics import metric_catalog
 from .monitor import analyze, demo_datasets
@@ -21,6 +22,8 @@ __version__ = "0.1.0"
 __all__ = [
     "Monitor",
     "DecisionConfig",
+    "DriftWatchClient",
+    "DriftWatchError",
     "MonitorResult",
     "ReferenceProfile",
     "analyze",

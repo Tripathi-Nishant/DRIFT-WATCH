@@ -17,6 +17,15 @@ DriftWatch is a self-hostable ML monitoring platform for examining changes in da
 </p>
 
 [Request Beta Access](https://diftwatch-request-landing-page.vercel.app/) · [Report an Issue](https://github.com/Tripathi-Nishant/DRIFT-WATCH/issues) · [Explore the Code](https://github.com/Tripathi-Nishant/DRIFT-WATCH)
+- Statistical drift and data-quality metrics for tabular data
+- Prediction and feedback ingestion for delayed-label monitoring
+- Decision layer for review, alert, and retraining recommendations
+- Dependency-light Python client and OpenAPI-compatible API contract
+- JWT authentication, roles, projects, API keys, and audit events
+- PostgreSQL-backed deployment with migration support
+- Retraining request and approval history
+- Dashboard for monitoring reports and operational workflows
+- Docker Compose quick start and CI checks
 
 </div>
 
@@ -209,6 +218,9 @@ report.save_html("report.html")
 ```
 
 `reference_df` and `current_df` represent your reference and current pandas DataFrames. Check the current API and examples in the repository if your installed revision uses different method signatures.
+For a running DriftWatch service, use the dependency-light `DriftWatchClient`
+from any model project. See [the integration guide](docs/integration.md), or
+inspect the live API contract at `/openapi.json`.
 
 ## Beyond tabular data
 
@@ -303,6 +315,7 @@ The optional `examples/placement-predictor-demo/` integration is intended for te
 - [Capabilities](docs/capabilities.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
+- [Model integration guide](docs/integration.md)
 
 Some links may depend on the current repository layout. If a document is not present in your branch, update the link or add the document before publishing.
 

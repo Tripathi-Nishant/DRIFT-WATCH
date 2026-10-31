@@ -21,6 +21,9 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Classification performance | Implemented | Accuracy, precision, recall, F1 and ROC-AUC. |
 | Regression performance | Implemented | MAE, RMSE, R² and MAPE. |
 | Decision layer | DriftWatch differentiator | Severity, confidence, rule trace, impact estimate and ACT/MONITOR/IGNORE. |
+| Python integration client | Implemented | Dependency-light `DriftWatchClient` for analysis, prediction ingestion, delayed feedback, and health checks. |
+| API contract | Implemented | OpenAPI-compatible description is available at `/openapi.json`. |
+| Alert visibility | Implemented, basic | Dashboard alert history shows webhook/email delivery status and retry details; rule configuration remains deployment-driven. |
 | Production embedding/image/LLM judges | Governed adapters | Sentence Transformers embeddings plus opt-in authenticated LLM judge controls for prompt versioning, PII redaction, budgets, and calibration bounds. Vision quality remains provider-specific. |
 | Vector storage | Optional adapter | Qdrant REST adapter with organization-scoped upserts and searches; deployment must provide and validate a Qdrant cluster. |
 | Distributed ingestion | Optional adapter | Redis-backed queue plus bounded local queue; deployment must provide Redis persistence and worker supervision. |

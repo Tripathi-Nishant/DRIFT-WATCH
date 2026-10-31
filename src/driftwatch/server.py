@@ -19,6 +19,7 @@ from .alerts import AlertDispatcher
 from .metrics import metric_catalog
 from .monitor import demo_datasets
 from .observability import Metrics, log_event
+from .openapi import API_SPEC
 from .pipeline import Monitor
 from .production import GeminiLLMJudge, RateLimiter, allowed_origins, max_body_bytes
 from .security import (
@@ -136,6 +137,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/v1/metrics":
             self._send(json.dumps({"metrics": metric_catalog()}).encode())
+            return
+        if path == "/openapi.json":
+            self._send(json.dumps(API_SPEC).encode())
             return
         if path == "/healthz":
             self._send(
