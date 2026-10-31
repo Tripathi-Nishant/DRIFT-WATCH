@@ -55,6 +55,15 @@ def test_model_lifecycle_and_incidents(tmp_path):
     assert resolved["owner"] == "owner@example.com"
 
 
+def test_api_key_inventory_and_revocation(tmp_path):
+    store = Store(tmp_path / "driftwatch.db")
+    key = store.save_api_key("org", "production", "hash-value")
+    assert store.list_api_keys("org")[0]["revoked_at"] is None
+    revoked = store.revoke_api_key("org", key["id"])
+    assert revoked["revoked_at"] is not None
+    assert store.revoke_api_key("org", key["id"]) is None
+
+
 def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
     from driftwatch.alerts import AlertDispatcher
 

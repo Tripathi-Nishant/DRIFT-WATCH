@@ -79,6 +79,10 @@ API_SPEC = {
             "get": {"summary": "List monitoring incidents", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Create an incident", "security": [{"bearerAuth": []}]},
         },
+        "/api/v1/api-keys": {
+            "get": {"summary": "List organization API keys", "security": [{"bearerAuth": []}]},
+            "post": {"summary": "Create an ingestion API key", "security": [{"bearerAuth": []}]},
+        },
         "/api/v1/research": {
             "get": {"summary": "List reproducible benchmark runs", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Run a seeded research benchmark", "security": [{"bearerAuth": []}]},

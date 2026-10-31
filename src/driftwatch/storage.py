@@ -365,6 +365,38 @@ class Store:
             )
         return {key: value for key, value in item.items() if key != "key_hash"}
 
+    def list_api_keys(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            return [
+                dict(row)
+                for row in db.execute(
+                    "SELECT id, name, created_at, revoked_at FROM api_keys "
+                    "WHERE organization_id = ? ORDER BY created_at DESC",
+                    (organization_id,),
+                )
+            ]
+
+    def revoke_api_key(self, organization_id: str, key_id: str) -> dict[str, Any] | None:
+        with self._lock, self._connect() as db:
+            active = db.execute(
+                "SELECT id FROM api_keys WHERE id = ? AND organization_id = ? "
+                "AND revoked_at IS NULL",
+                (key_id, organization_id),
+            ).fetchone()
+            if not active:
+                return None
+            db.execute(
+                "UPDATE api_keys SET revoked_at = ? "
+                "WHERE id = ? AND organization_id = ? AND revoked_at IS NULL",
+                (_now(), key_id, organization_id),
+            )
+            row = db.execute(
+                "SELECT id, name, created_at, revoked_at FROM api_keys "
+                "WHERE id = ? AND organization_id = ?",
+                (key_id, organization_id),
+            ).fetchone()
+            return dict(row) if row else None
+
     def audit(
         self,
         action: str,

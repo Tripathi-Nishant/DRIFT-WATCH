@@ -229,6 +229,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/integration",
             "/api/v1/model-comparison",
             "/api/v1/incidents",
+            "/api/v1/api-keys",
         }:
             identity = self._identity()
             if not identity:
@@ -254,6 +255,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.compare_models(identity["org_id"])).encode())
             elif path == "/api/v1/incidents":
                 self._send(json.dumps(STORE.list_incidents(identity["org_id"])).encode())
+            elif path == "/api/v1/api-keys":
+                self._send(json.dumps(STORE.list_api_keys(identity["org_id"])).encode())
             elif path == "/api/v1/research":
                 self._send(json.dumps(STORE.list_research_runs(identity["org_id"])).encode())
             elif path == "/api/v1/integration":
@@ -426,6 +429,18 @@ class Handler(BaseHTTPRequestHandler):
                 return
             STORE.audit(f"incident.{status.lower()}", identity["org_id"], identity["sub"], "incident", incident_id)
             self._send(json.dumps(incident).encode())
+            return
+        if path.startswith("/api/v1/api-keys/") and path.endswith("/revoke"):
+            identity = self._require_write_access()
+            if not identity:
+                return
+            key_id = path.split("/")[-2]
+            key = STORE.revoke_api_key(identity["org_id"], key_id)
+            if not key:
+                self._send(b'{"error":"active API key not found"}', status=404)
+                return
+            STORE.audit("api_key.revoked", identity["org_id"], identity["sub"], "api_key", key_id)
+            self._send(json.dumps(key).encode())
             return
         if path in {
             "/api/ingest/predictions",
