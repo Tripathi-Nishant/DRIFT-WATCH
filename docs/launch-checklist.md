@@ -24,6 +24,10 @@ charging customers. The current API-key and organization model is the correct
 integration point; add a metering worker and provider webhook reconciliation
 before enabling paid plans.
 
+The current beta exposes `GET /api/v1/usage` with counts, configured limits,
+remaining capacity, and exceeded resources. Configure the quota environment
+variables per deployment and connect this endpoint to billing before charging.
+
 ## Release
 
 Create a version tag such as `v0.1.1`. The release workflow builds the wheel,

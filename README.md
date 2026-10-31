@@ -24,6 +24,7 @@ DriftWatch is a self-hostable ML monitoring platform for examining changes in da
 - JWT authentication, roles, projects, API keys, and audit events
 - PostgreSQL-backed deployment with migration support
 - Public beta-access requests with owner/admin review
+- Organization usage and configurable quota visibility
 - Retraining request and approval history
 - Dashboard for monitoring reports and operational workflows
 - Operations workspace for dataset versions, schedules, alert rules, and

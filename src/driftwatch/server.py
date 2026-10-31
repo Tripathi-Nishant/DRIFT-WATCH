@@ -257,6 +257,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/model-comparison",
             "/api/v1/incidents",
             "/api/v1/api-keys",
+            "/api/v1/usage",
             "/api/v1/access-requests",
         }:
             identity = self._identity()
@@ -285,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_incidents(identity["org_id"])).encode())
             elif path == "/api/v1/api-keys":
                 self._send(json.dumps(STORE.list_api_keys(identity["org_id"])).encode())
+            elif path == "/api/v1/usage":
+                self._send(json.dumps(STORE.usage_summary(identity["org_id"])).encode())
             elif path == "/api/v1/access-requests":
                 if identity.get("role") not in {"OWNER", "ADMIN"}:
                     self._send(b'{"error":"insufficient role"}', status=403)

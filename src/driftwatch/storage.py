@@ -472,6 +472,37 @@ class Store:
                 )
             ]
 
+    def usage_summary(self, organization_id: str) -> dict[str, Any]:
+        with self._connect() as db:
+            def count(query: str, params: tuple[Any, ...] = ()) -> int:
+                return int(db.execute(query, params).fetchone()[0])
+
+            usage = {
+                "runs": count("SELECT COUNT(*) FROM runs WHERE organization_id = ?", (organization_id,)),
+                "predictions": count(
+                    "SELECT COUNT(*) FROM predictions p JOIN models m ON m.id = p.model_id "
+                    "WHERE m.organization_id = ?", (organization_id,)
+                ),
+                "models": count("SELECT COUNT(*) FROM models WHERE organization_id = ?", (organization_id,)),
+                "active_api_keys": count(
+                    "SELECT COUNT(*) FROM api_keys WHERE organization_id = ? AND revoked_at IS NULL",
+                    (organization_id,),
+                ),
+            }
+        limits = {
+            "runs": int(os.getenv("DRIFTWATCH_QUOTA_RUNS", "10000")),
+            "predictions": int(os.getenv("DRIFTWATCH_QUOTA_PREDICTIONS", "100000")),
+            "models": int(os.getenv("DRIFTWATCH_QUOTA_MODELS", "100")),
+            "active_api_keys": int(os.getenv("DRIFTWATCH_QUOTA_API_KEYS", "10")),
+        }
+        return {
+            "plan": os.getenv("DRIFTWATCH_PLAN", "beta"),
+            "usage": usage,
+            "limits": limits,
+            "remaining": {key: max(0, limits[key] - usage[key]) for key in usage},
+            "exceeded": [key for key in usage if usage[key] >= limits[key]],
+        }
+
     def revoke_api_key(self, organization_id: str, key_id: str) -> dict[str, Any] | None:
         with self._lock, self._connect() as db:
             active = db.execute(
