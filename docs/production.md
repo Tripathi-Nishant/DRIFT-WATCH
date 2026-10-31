@@ -46,6 +46,9 @@ python -m pytest tests/integration/test_postgres.py -q
 - Use a strong `DRIFTWATCH_SECRET_KEY` in the deployment environment.
 - Restrict `DRIFTWATCH_ALLOWED_ORIGINS` to the dashboard origin.
 - Set `DRIFTWATCH_MAX_BODY_BYTES` to the largest accepted payload.
+- Keep the public beta form protected with `DRIFTWATCH_ACCESS_REQUEST_RATE`
+  and `DRIFTWATCH_ACCESS_REQUEST_BURST`; these are process-local limits and
+  should be supplemented by an edge proxy or WAF in multi-node deployments.
 - Use API keys only for ingestion and rotate/revoke them.
 - Review the Models workspace regularly and revoke keys belonging to departed
   services or replaced deployments; raw key values are never recoverable after

@@ -57,7 +57,32 @@ LIMITER = RateLimiter(
     rate=float(os.getenv("DRIFTWATCH_RATE_LIMIT", "60")),
     burst=int(os.getenv("DRIFTWATCH_RATE_BURST", "120")),
 )
+ACCESS_REQUEST_LIMITER = RateLimiter(
+    rate=float(os.getenv("DRIFTWATCH_ACCESS_REQUEST_RATE", "0.01")),
+    burst=int(os.getenv("DRIFTWATCH_ACCESS_REQUEST_BURST", "3")),
+)
 LOGGER = logging.getLogger("driftwatch.api")
+
+
+def _validate_access_request(body: Any) -> tuple[str, str, str] | None:
+    if not isinstance(body, dict):
+        return None
+    email = body.get("email")
+    organization = body.get("organization")
+    use_case = body.get("use_case", "")
+    if not all(isinstance(value, str) for value in (email, organization, use_case)):
+        return None
+    email, organization, use_case = email.strip().lower(), organization.strip(), use_case.strip()
+    if (
+        not email
+        or "@" not in email
+        or len(email) > 320
+        or not organization
+        or len(organization) > 160
+        or len(use_case) > 2000
+    ):
+        return None
+    return email, organization, use_case
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -367,9 +392,18 @@ class Handler(BaseHTTPRequestHandler):
             self._send(b'{"error":"invalid JSON"}', status=400)
             return
         if path == "/api/v1/access-requests":
-            request = STORE.create_access_request(
-                body["email"], body["organization"], body.get("use_case", "")
-            )
+            if not ACCESS_REQUEST_LIMITER.allow(self.client_address[0]):
+                self._send(b'{"error":"too many access requests"}', status=429)
+                return
+            validated = _validate_access_request(body)
+            if not validated:
+                self._send(
+                    b'{"error":"email, organization, and a valid request are required"}',
+                    status=400,
+                )
+                return
+            email, organization, use_case = validated
+            request = STORE.create_access_request(email, organization, use_case)
             self._send(
                 json.dumps({
                     "id": request["id"],

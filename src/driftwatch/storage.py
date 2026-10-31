@@ -167,13 +167,21 @@ class Store:
     def create_access_request(
         self, email: str, organization: str, use_case: str
     ) -> dict[str, Any]:
+        normalized_email = email.strip().lower()
         item = {
-            "id": str(uuid.uuid4()), "email": email.strip().lower(),
+            "id": str(uuid.uuid4()), "email": normalized_email,
             "organization": organization.strip(), "use_case": use_case.strip(),
             "status": "PENDING", "created_at": _now(),
             "reviewed_at": None, "reviewer": None,
         }
         with self._lock, self._connect() as db:
+            existing = db.execute(
+                "SELECT * FROM access_requests WHERE email = ? AND status = 'PENDING' "
+                "ORDER BY created_at DESC LIMIT 1",
+                (normalized_email,),
+            ).fetchone()
+            if existing:
+                return dict(existing)
             db.execute("INSERT INTO access_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
         return item
 
