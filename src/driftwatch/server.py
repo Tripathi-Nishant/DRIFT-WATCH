@@ -204,6 +204,10 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/v1/projects") or path in {
             "/api/v1/audit",
             "/api/v1/retraining",
+            "/api/v1/datasets",
+            "/api/v1/schedules",
+            "/api/v1/alert-rules",
+            "/api/v1/model-comparison",
         }:
             identity = self._identity()
             if not identity:
@@ -217,6 +221,14 @@ class Handler(BaseHTTPRequestHandler):
                         STORE.list_retraining_requests(identity["org_id"])
                     ).encode()
                 )
+            elif path == "/api/v1/datasets":
+                self._send(json.dumps(STORE.list_dataset_versions(identity["org_id"])).encode())
+            elif path == "/api/v1/schedules":
+                self._send(json.dumps(STORE.list_schedules(identity["org_id"])).encode())
+            elif path == "/api/v1/alert-rules":
+                self._send(json.dumps(STORE.list_alert_rules(identity["org_id"])).encode())
+            elif path == "/api/v1/model-comparison":
+                self._send(json.dumps(STORE.compare_models(identity["org_id"])).encode())
             else:
                 self._send(json.dumps(STORE.list_projects(identity["org_id"])).encode())
             return
@@ -276,6 +288,9 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/auth/login",
             "/api/v1/projects",
             "/api/v1/api-keys",
+            "/api/v1/datasets",
+            "/api/v1/schedules",
+            "/api/v1/alert-rules",
         } and not path.startswith("/api/v1/retraining"):
             self._send(b"Not found", "text/plain", 404)
             return
@@ -383,33 +398,35 @@ class Handler(BaseHTTPRequestHandler):
                 ).encode()
             )
             return
-        if path in {"/api/v1/projects", "/api/v1/api-keys"}:
+        if path in {"/api/v1/projects", "/api/v1/api-keys", "/api/v1/datasets", "/api/v1/schedules", "/api/v1/alert-rules"}:
             identity = self._require_write_access()
             if not identity:
                 return
             if path == "/api/v1/projects":
-                project = STORE.create_project(identity["org_id"], body["name"])
-                STORE.audit(
-                    "project.created",
-                    identity["org_id"],
-                    identity["sub"],
-                    "project",
-                    project["id"],
-                )
-                self._send(json.dumps(project).encode(), status=201)
-            else:
+                item = STORE.create_project(identity["org_id"], body["name"])
+                event = "project.created"
+            elif path == "/api/v1/api-keys":
                 raw, key_hash = new_api_key()
-                item = STORE.save_api_key(
-                    identity["org_id"], body.get("name", "library"), key_hash
+                item = STORE.save_api_key(identity["org_id"], body.get("name", "library"), key_hash)
+                item["key"] = raw
+                event = "api_key.created"
+            elif path == "/api/v1/datasets":
+                item = STORE.create_dataset_version(
+                    identity["org_id"], body["name"], body["version"], body.get("kind", "reference"),
+                    body["rows"], body["columns"], body["fingerprint"], body.get("model_id"), body.get("metadata"),
                 )
-                STORE.audit(
-                    "api_key.created",
-                    identity["org_id"],
-                    identity["sub"],
-                    "api_key",
-                    item["id"],
+                event = "dataset.version.created"
+            elif path == "/api/v1/schedules":
+                item = STORE.create_schedule(identity["org_id"], body["name"], body["cadence"], body.get("model_id"), body.get("config"))
+                event = "schedule.created"
+            else:
+                item = STORE.create_alert_rule(
+                    identity["org_id"], body["name"], body.get("severity", "HIGH"),
+                    body.get("channel", "webhook"), body.get("destination"), body.get("threshold"),
                 )
-                self._send(json.dumps(item | {"key": raw}).encode(), status=201)
+                event = "alert-rule.created"
+            STORE.audit(event, identity["org_id"], identity["sub"], path.rsplit("/", 1)[-1], item["id"])
+            self._send(json.dumps(item).encode(), status=201)
             return
         if path == "/api/models":
             self._send(

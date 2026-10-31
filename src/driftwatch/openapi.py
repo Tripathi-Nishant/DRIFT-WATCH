@@ -57,5 +57,20 @@ API_SPEC = {
         },
         "/api/alerts": {"get": {"summary": "List alert delivery attempts", "security": [{"bearerAuth": []}]}},
         "/api/v1/retraining": {"get": {"summary": "List retraining requests", "security": [{"bearerAuth": []}]}},
+        "/api/v1/datasets": {
+            "get": {"summary": "List versioned datasets", "security": [{"bearerAuth": []}]},
+            "post": {"summary": "Register a dataset version", "security": [{"bearerAuth": []}]},
+        },
+        "/api/v1/schedules": {
+            "get": {"summary": "List monitoring schedules", "security": [{"bearerAuth": []}]},
+            "post": {"summary": "Create a monitoring schedule", "security": [{"bearerAuth": []}]},
+        },
+        "/api/v1/alert-rules": {
+            "get": {"summary": "List alert rules", "security": [{"bearerAuth": []}]},
+            "post": {"summary": "Create an alert rule", "security": [{"bearerAuth": []}]},
+        },
+        "/api/v1/model-comparison": {
+            "get": {"summary": "Compare model monitoring outcomes", "security": [{"bearerAuth": []}]},
+        },
     },
 }

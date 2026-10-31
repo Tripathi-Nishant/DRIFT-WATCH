@@ -59,10 +59,26 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS feedback (id TEXT PRIMARY KEY, prediction_id TEXT NOT NULL, label TEXT NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS alerts (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, channel TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, detail TEXT);
                 CREATE TABLE IF NOT EXISTS retraining_requests (id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, status TEXT NOT NULL, requested_by TEXT, approved_by TEXT, report JSONB NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS dataset_versions (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, kind TEXT NOT NULL, rows INTEGER NOT NULL, columns INTEGER NOT NULL, fingerprint TEXT NOT NULL, metadata JSONB NOT NULL, created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS schedules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, cadence TEXT NOT NULL, enabled INTEGER NOT NULL, next_run_at TEXT, last_run_at TEXT, config JSONB NOT NULL, created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, created_at TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
                 """
             )
+
+    def compare_models(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                """SELECT model_id, COUNT(*) AS runs,
+                   AVG((report->'summary'->>'drift_rate')::double precision) AS avg_drift,
+                   AVG((report->'summary'->>'quality_score')::double precision) AS avg_quality,
+                   MAX(created_at) AS last_run
+                   FROM runs WHERE organization_id = ? AND model_id IS NOT NULL
+                   GROUP BY model_id ORDER BY avg_quality DESC""",
+                (organization_id,),
+            )
+            return [dict(row) for row in rows]
 
 
 class _PostgresConnection:

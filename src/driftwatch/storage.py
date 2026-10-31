@@ -95,6 +95,22 @@ class Store:
                     requested_by TEXT, approved_by TEXT, report TEXT NOT NULL, created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS dataset_versions (
+                    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT,
+                    name TEXT NOT NULL, version TEXT NOT NULL, kind TEXT NOT NULL,
+                    rows INTEGER NOT NULL, columns INTEGER NOT NULL, fingerprint TEXT NOT NULL,
+                    metadata TEXT NOT NULL, created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS schedules (
+                    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT,
+                    name TEXT NOT NULL, cadence TEXT NOT NULL, enabled INTEGER NOT NULL,
+                    next_run_at TEXT, last_run_at TEXT, config TEXT NOT NULL, created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS alert_rules (
+                    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL,
+                    enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL,
+                    destination TEXT, threshold REAL, created_at TEXT NOT NULL
+                );
                 """
             )
             for table, column in (("models", "organization_id"), ("runs", "organization_id")):
@@ -157,6 +173,88 @@ class Store:
                     (organization_id,),
                 )
             ]
+
+    def create_dataset_version(
+        self, organization_id: str, name: str, version: str, kind: str,
+        rows: int, columns: int, fingerprint: str, model_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "organization_id": organization_id,
+            "model_id": model_id, "name": name, "version": version, "kind": kind,
+            "rows": int(rows), "columns": int(columns), "fingerprint": fingerprint,
+            "metadata": json.dumps(metadata or {}), "created_at": _now(),
+        }
+        with self._lock, self._connect() as db:
+            db.execute(
+                "INSERT INTO dataset_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                tuple(item.values()),
+            )
+        item["metadata"] = metadata or {}
+        return item
+
+    def list_dataset_versions(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                "SELECT * FROM dataset_versions WHERE organization_id = ? ORDER BY created_at DESC",
+                (organization_id,),
+            )
+            return [{**dict(row), "metadata": _decode_json(row["metadata"])} for row in rows]
+
+    def create_schedule(
+        self, organization_id: str, name: str, cadence: str,
+        model_id: str | None = None, config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "organization_id": organization_id,
+            "model_id": model_id, "name": name, "cadence": cadence, "enabled": 1,
+            "next_run_at": None, "last_run_at": None,
+            "config": json.dumps(config or {}), "created_at": _now(),
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO schedules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        item["config"] = config or {}
+        item["enabled"] = True
+        return item
+
+    def list_schedules(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute("SELECT * FROM schedules WHERE organization_id = ? ORDER BY created_at DESC", (organization_id,))
+            return [{**dict(row), "enabled": bool(row["enabled"]), "config": _decode_json(row["config"])} for row in rows]
+
+    def create_alert_rule(
+        self, organization_id: str, name: str, severity: str, channel: str,
+        destination: str | None = None, threshold: float | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "organization_id": organization_id, "name": name,
+            "enabled": 1, "severity": severity, "channel": channel,
+            "destination": destination, "threshold": threshold, "created_at": _now(),
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO alert_rules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        item["enabled"] = True
+        return item
+
+    def list_alert_rules(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            return [
+                {**dict(row), "enabled": bool(row["enabled"])}
+                for row in db.execute("SELECT * FROM alert_rules WHERE organization_id = ? ORDER BY created_at DESC", (organization_id,))
+            ]
+
+    def compare_models(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            rows = db.execute(
+                """SELECT model_id, COUNT(*) AS runs,
+                   AVG(CAST(json_extract(report, '$.summary.drift_rate') AS REAL)) AS avg_drift,
+                   AVG(CAST(json_extract(report, '$.summary.quality_score') AS REAL)) AS avg_quality,
+                   MAX(created_at) AS last_run
+                   FROM runs WHERE organization_id = ? AND model_id IS NOT NULL
+                   GROUP BY model_id ORDER BY avg_quality DESC""",
+                (organization_id,),
+            )
+            return [dict(row) for row in rows]
 
     def save_api_key(
         self, organization_id: str, name: str, key_hash: str

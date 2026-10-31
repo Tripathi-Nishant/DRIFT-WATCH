@@ -31,6 +31,10 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Project metric plugins | Implemented | Register Python callables for domain-specific metrics; results and catalog metadata are included in reports/API discovery. |
 | Reference profile identity | Implemented | Every in-memory reference profile has a deterministic fingerprint derived from schema summaries and row count. |
 | Filtered run history | Implemented | API and storage support model, severity, decision, time-window, and bounded result filters. |
+| Dataset version registry | Implemented | Organization-scoped reference/current dataset versions retain row/column counts, fingerprints, and metadata. |
+| Monitoring schedules | Implemented | Dashboard and API manage hourly/daily/weekly schedules; execution can use the existing local scheduler or a supervised worker. |
+| Alert-rule configuration | Implemented | Organization-scoped severity, channel, destination, and threshold policies are persisted and auditable. |
+| Multi-model comparison | Implemented | Aggregated run count, average drift, average quality, and latest-run comparison is available in the Operations workspace. |
 
 Evidently remains the stronger general-purpose monitoring framework. DriftWatch now
 has a metric-family architecture, governed provider adapters, tenant-aware storage,

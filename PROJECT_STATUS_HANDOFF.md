@@ -452,9 +452,11 @@ security upgrades before installing the runtime package.
 - Add interactive drill-down from heatmap cells directly into a selected run.
 - Add dashboard controls that use the API's model, project, severity, and date
   range filters.
-- Add persisted dataset/profile version history and explicit reference-window
-  management beyond the current deterministic profile fingerprint.
-- Add scheduled dashboard jobs with visible schedules and run history.
+- Add schedule execution worker supervision and run history links for each
+  configured schedule.
+- Add dataset upload/version promotion workflows beyond metadata registration.
+- Add alert-rule evaluation wiring so configured rules control dispatch
+  destinations and thresholds.
 
 ### Provider and research work remaining
 
