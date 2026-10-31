@@ -61,10 +61,12 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS retraining_requests (id TEXT PRIMARY KEY, organization_id TEXT, model_id TEXT, status TEXT NOT NULL, requested_by TEXT, approved_by TEXT, report JSONB NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS dataset_versions (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, kind TEXT NOT NULL, rows INTEGER NOT NULL, columns INTEGER NOT NULL, fingerprint TEXT NOT NULL, metadata JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS schedules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, cadence TEXT NOT NULL, enabled INTEGER NOT NULL, next_run_at TEXT, last_run_at TEXT, config JSONB NOT NULL, created_at TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS schedule_runs (id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, organization_id TEXT NOT NULL, status TEXT NOT NULL, severity TEXT, started_at TEXT NOT NULL, completed_at TEXT, detail TEXT, output_path TEXT);
+                CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, metric TEXT NOT NULL DEFAULT 'drift_rate', created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS research_runs (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL, seeds JSONB NOT NULL, result JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
+                ALTER TABLE alert_rules ADD COLUMN IF NOT EXISTS metric TEXT NOT NULL DEFAULT 'drift_rate';
                 """
             )
 

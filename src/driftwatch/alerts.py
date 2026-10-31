@@ -34,12 +34,39 @@ class AlertDispatcher:
             "reasons": summary.get("reasons", []),
         }
         rules = self.store.list_alert_rules(run.get("organization_id")) if run.get("organization_id") else []
+        summary = run["report"].get("summary", {})
+        performance = run["report"].get("performance") or {}
+
+        def threshold_matches(rule: dict[str, Any]) -> bool:
+            threshold = rule.get("threshold")
+            if threshold is None:
+                return True
+            metric = rule.get("metric", "drift_rate")
+            values = {
+                "drift_rate": summary.get("drift_rate"),
+                "quality_score": summary.get("quality_score"),
+                "confidence": summary.get("confidence"),
+                "impact_score": summary.get("impact_score"),
+                **{
+                    key: value for key, value in performance.items()
+                    if isinstance(value, (int, float))
+                },
+            }
+            value = values.get(metric)
+            if not isinstance(value, (int, float)):
+                return False
+            return float(value) >= float(threshold)
+
         matching = [
             rule for rule in rules
             if rule["enabled"] and rule["severity"] in {severity, "ALL"}
+            and threshold_matches(rule)
         ]
         if rules and not matching:
-            return self.store.record_alert(run["id"], "rules", "skipped", f"No enabled rule matches {severity}")
+            return self.store.record_alert(
+                run["id"], "rules", "skipped",
+                f"No enabled rule matches severity={severity} and configured thresholds",
+            )
         rule = next((item for item in matching if item["channel"] == "webhook"), None)
         webhook_url = (rule or {}).get("destination") or self.webhook_url
         if not webhook_url:

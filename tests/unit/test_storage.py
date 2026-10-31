@@ -56,6 +56,28 @@ def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
     assert "No enabled rule" in result["detail"]
 
 
+def test_alert_rule_enforces_metric_threshold(tmp_path):
+    from driftwatch.alerts import AlertDispatcher
+
+    store = Store(tmp_path / "driftwatch.db")
+    store.create_alert_rule(
+        "org", "Severe drift only", "HIGH", "webhook",
+        threshold=0.8, metric="drift_rate",
+    )
+    run = store.record_run(
+        {
+            "summary": {
+                "severity": "HIGH", "decision": "ACT", "model": "checkout",
+                "drift_rate": 0.4,
+            }
+        },
+        organization_id="org",
+    )
+    result = AlertDispatcher(store).dispatch(run)
+    assert result["status"] == "skipped"
+    assert "thresholds" in result["detail"]
+
+
 def test_store_persists_research_evidence(tmp_path):
     store = Store(tmp_path / "driftwatch.db")
     item = store.record_research_run(

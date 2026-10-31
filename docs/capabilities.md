@@ -32,8 +32,8 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Reference profile identity | Implemented | Every in-memory reference profile has a deterministic fingerprint derived from schema summaries and row count. |
 | Filtered run history | Implemented | API and storage support model, severity, decision, time-window, and bounded result filters. |
 | Dataset version registry | Implemented | Organization-scoped reference/current dataset versions retain row/column counts, fingerprints, and metadata. |
-| Monitoring schedules | Implemented | Dashboard and API manage hourly/daily/weekly schedules; execution can use the existing local scheduler or a supervised worker. |
-| Alert-rule configuration | Implemented | Organization-scoped severity, channel, destination, and threshold policies are persisted and auditable. |
+| Monitoring schedules | Implemented | Dashboard and API manage schedules; the worker executes due file-backed schedules and persists success/failure history. |
+| Alert-rule configuration | Implemented | Organization-scoped severity, channel, destination, metric, and threshold policies are persisted and enforced. |
 | Multi-model comparison | Implemented | Aggregated run count, average drift, average quality, and latest-run comparison is available in the Operations workspace. |
 | Rule-aware alert dispatch | Implemented | Matching organization rules control webhook/email delivery; unmatched severities are recorded as skipped rather than silently delivered. |
 | Automatic dataset lineage | Implemented | API analyses register reference/current versions with fingerprints, dimensions, and originating run metadata. |

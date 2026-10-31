@@ -106,10 +106,16 @@ class Store:
                     name TEXT NOT NULL, cadence TEXT NOT NULL, enabled INTEGER NOT NULL,
                     next_run_at TEXT, last_run_at TEXT, config TEXT NOT NULL, created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS schedule_runs (
+                    id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, organization_id TEXT NOT NULL,
+                    status TEXT NOT NULL, severity TEXT, started_at TEXT NOT NULL,
+                    completed_at TEXT, detail TEXT, output_path TEXT
+                );
                 CREATE TABLE IF NOT EXISTS alert_rules (
                     id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL,
                     enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL,
-                    destination TEXT, threshold REAL, created_at TEXT NOT NULL
+                    destination TEXT, threshold REAL, metric TEXT NOT NULL DEFAULT 'drift_rate',
+                    created_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS research_runs (
                     id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL,
@@ -122,6 +128,12 @@ class Store:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
                 except sqlite3.OperationalError:
                     pass
+            try:
+                db.execute(
+                    "ALTER TABLE alert_rules ADD COLUMN metric TEXT NOT NULL DEFAULT 'drift_rate'"
+                )
+            except sqlite3.OperationalError:
+                pass
 
     def create_organization(self, name: str) -> dict[str, Any]:
         organization = {"id": str(uuid.uuid4()), "name": name, "created_at": _now()}
@@ -226,17 +238,53 @@ class Store:
             rows = db.execute("SELECT * FROM schedules WHERE organization_id = ? ORDER BY created_at DESC", (organization_id,))
             return [{**dict(row), "enabled": bool(row["enabled"]), "config": _decode_json(row["config"])} for row in rows]
 
+    def record_schedule_run(
+        self, schedule: dict[str, Any], status: str, started_at: str,
+        completed_at: str | None = None, severity: str | None = None,
+        detail: str | None = None, output_path: str | None = None,
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "schedule_id": schedule["id"],
+            "organization_id": schedule["organization_id"], "status": status,
+            "severity": severity, "started_at": started_at,
+            "completed_at": completed_at, "detail": detail,
+            "output_path": output_path,
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO schedule_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        return item
+
+    def list_schedule_runs(
+        self, organization_id: str, schedule_id: str | None = None, limit: int = 50
+    ) -> list[dict[str, Any]]:
+        where = "organization_id = ?"
+        params: list[Any] = [organization_id]
+        if schedule_id:
+            where += " AND schedule_id = ?"
+            params.append(schedule_id)
+        params.append(max(1, min(limit, 200)))
+        with self._connect() as db:
+            rows = db.execute(
+                f"SELECT * FROM schedule_runs WHERE {where} ORDER BY started_at DESC LIMIT ?",
+                tuple(params),
+            )
+            return [dict(row) for row in rows]
+
     def create_alert_rule(
         self, organization_id: str, name: str, severity: str, channel: str,
         destination: str | None = None, threshold: float | None = None,
+        metric: str = "drift_rate",
     ) -> dict[str, Any]:
         item = {
             "id": str(uuid.uuid4()), "organization_id": organization_id, "name": name,
             "enabled": 1, "severity": severity, "channel": channel,
-            "destination": destination, "threshold": threshold, "created_at": _now(),
+            "destination": destination, "threshold": threshold, "metric": metric,
+            "created_at": _now(),
         }
         with self._lock, self._connect() as db:
-            db.execute("INSERT INTO alert_rules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+            db.execute(            "INSERT INTO alert_rules VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            tuple(item.values()),
+            )
         item["enabled"] = True
         return item
 

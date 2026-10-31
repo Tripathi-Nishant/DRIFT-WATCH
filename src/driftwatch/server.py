@@ -208,6 +208,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/retraining",
             "/api/v1/datasets",
             "/api/v1/schedules",
+            "/api/v1/schedule-runs",
             "/api/v1/alert-rules",
             "/api/v1/research",
             "/api/v1/integration",
@@ -229,6 +230,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_dataset_versions(identity["org_id"])).encode())
             elif path == "/api/v1/schedules":
                 self._send(json.dumps(STORE.list_schedules(identity["org_id"])).encode())
+            elif path == "/api/v1/schedule-runs":
+                self._send(json.dumps(STORE.list_schedule_runs(identity["org_id"])).encode())
             elif path == "/api/v1/alert-rules":
                 self._send(json.dumps(STORE.list_alert_rules(identity["org_id"])).encode())
             elif path == "/api/v1/model-comparison":
@@ -444,7 +447,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 item = STORE.create_alert_rule(
                     identity["org_id"], body["name"], body.get("severity", "HIGH"),
-                    body.get("channel", "webhook"), body.get("destination"), body.get("threshold"),
+                    body.get("channel", "webhook"), body.get("destination"),
+                    body.get("threshold"), body.get("metric", "drift_rate"),
                 )
                 event = "alert-rule.created"
             STORE.audit(event, identity["org_id"], identity["sub"], path.rsplit("/", 1)[-1], item["id"])

@@ -65,6 +65,9 @@ API_SPEC = {
             "get": {"summary": "List monitoring schedules", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Create a monitoring schedule", "security": [{"bearerAuth": []}]},
         },
+        "/api/v1/schedule-runs": {
+            "get": {"summary": "List persisted schedule executions", "security": [{"bearerAuth": []}]},
+        },
         "/api/v1/alert-rules": {
             "get": {"summary": "List alert rules", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Create an alert rule", "security": [{"bearerAuth": []}]},
