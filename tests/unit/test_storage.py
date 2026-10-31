@@ -54,3 +54,14 @@ def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
     result = AlertDispatcher(store).dispatch(run)
     assert result["status"] == "skipped"
     assert "No enabled rule" in result["detail"]
+
+
+def test_store_persists_research_evidence(tmp_path):
+    store = Store(tmp_path / "driftwatch.db")
+    item = store.record_research_run(
+        "org", "synthetic", [1, 7], {"clean_false_alerts": 0}
+    )
+    saved = store.list_research_runs("org")
+    assert saved[0]["id"] == item["id"]
+    assert saved[0]["seeds"] == [1, 7]
+    assert saved[0]["result"]["clean_false_alerts"] == 0

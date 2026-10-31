@@ -27,6 +27,7 @@ DriftWatch is a self-hostable ML monitoring platform for examining changes in da
 - Dashboard for monitoring reports and operational workflows
 - Operations workspace for dataset versions, schedules, alert rules, and
   multi-model comparison
+- Research Lab for reproducible seeded benchmarks and confidence intervals
 - Docker Compose quick start and CI checks
 
 </div>

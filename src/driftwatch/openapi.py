@@ -72,5 +72,9 @@ API_SPEC = {
         "/api/v1/model-comparison": {
             "get": {"summary": "Compare model monitoring outcomes", "security": [{"bearerAuth": []}]},
         },
+        "/api/v1/research": {
+            "get": {"summary": "List reproducible benchmark runs", "security": [{"bearerAuth": []}]},
+            "post": {"summary": "Run a seeded research benchmark", "security": [{"bearerAuth": []}]},
+        },
     },
 }

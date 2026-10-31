@@ -62,6 +62,7 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS dataset_versions (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, version TEXT NOT NULL, kind TEXT NOT NULL, rows INTEGER NOT NULL, columns INTEGER NOT NULL, fingerprint TEXT NOT NULL, metadata JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS schedules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, model_id TEXT, name TEXT NOT NULL, cadence TEXT NOT NULL, enabled INTEGER NOT NULL, next_run_at TEXT, last_run_at TEXT, config JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, created_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS research_runs (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL, seeds JSONB NOT NULL, result JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
                 """
@@ -79,6 +80,37 @@ class PostgresStore(Store):
                 (organization_id,),
             )
             return [dict(row) for row in rows]
+
+    def record_research_run(
+        self, organization_id: str, suite: str, seeds: list[int], result: dict[str, Any]
+    ) -> dict[str, Any]:
+        import uuid
+        from datetime import UTC, datetime
+
+        item = {
+            "id": str(uuid.uuid4()),
+            "organization_id": organization_id,
+            "suite": suite,
+            "seeds": seeds,
+            "result": result,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+        with self._connect() as db:
+            db.execute(
+                "INSERT INTO research_runs VALUES (?, ?, ?, ?, ?, ?)",
+                (item["id"], organization_id, suite, seeds, result, item["created_at"]),
+            )
+        return item
+
+    def list_research_runs(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            return [
+                dict(row)
+                for row in db.execute(
+                    "SELECT * FROM research_runs WHERE organization_id = ? ORDER BY created_at DESC LIMIT 50",
+                    (organization_id,),
+                )
+            ]
 
 
 class _PostgresConnection:

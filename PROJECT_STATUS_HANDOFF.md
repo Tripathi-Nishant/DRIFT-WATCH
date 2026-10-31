@@ -267,6 +267,10 @@ The current React dashboard includes:
 - Retraining page and approval history
 - Alerts page with delivery status
 - Audit-log page
+- Operations control plane for dataset versions, schedules, alert rules, and
+  multi-model comparison
+- Research Lab for seeded benchmark execution, confidence intervals, experiment
+  history, and JSON evidence downloads
 - JSON report download
 
 ## 8. Python package and integration
@@ -454,6 +458,7 @@ security upgrades before installing the runtime package.
 - Add schedule execution worker supervision and run history links for each
   configured schedule.
 - Add dataset upload/version promotion workflows beyond metadata registration.
+- Add paper-specific statistical tests and matched Evidently benchmark reporting.
 
 ### Provider and research work remaining
 

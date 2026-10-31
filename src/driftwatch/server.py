@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -22,6 +23,7 @@ from .observability import Metrics, log_event
 from .openapi import API_SPEC
 from .pipeline import Monitor
 from .production import GeminiLLMJudge, RateLimiter, allowed_origins, max_body_bytes
+from .research import run_public_suite, run_suite
 from .security import (
     hash_password,
     issue_token,
@@ -207,6 +209,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/datasets",
             "/api/v1/schedules",
             "/api/v1/alert-rules",
+            "/api/v1/research",
             "/api/v1/model-comparison",
         }:
             identity = self._identity()
@@ -229,6 +232,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_alert_rules(identity["org_id"])).encode())
             elif path == "/api/v1/model-comparison":
                 self._send(json.dumps(STORE.compare_models(identity["org_id"])).encode())
+            elif path == "/api/v1/research":
+                self._send(json.dumps(STORE.list_research_runs(identity["org_id"])).encode())
             else:
                 self._send(json.dumps(STORE.list_projects(identity["org_id"])).encode())
             return
@@ -426,6 +431,33 @@ class Handler(BaseHTTPRequestHandler):
                 )
                 event = "alert-rule.created"
             STORE.audit(event, identity["org_id"], identity["sub"], path.rsplit("/", 1)[-1], item["id"])
+            self._send(json.dumps(item).encode(), status=201)
+            return
+        if path == "/api/v1/research":
+            identity = self._require_write_access()
+            if not identity:
+                return
+            seeds = body.get("seeds", [1, 7, 42, 99])
+            if (
+                not isinstance(seeds, list)
+                or not seeds
+                or len(seeds) > 50
+                or not all(isinstance(seed, int) for seed in seeds)
+            ):
+                self._send(b'{"error":"seeds must be a non-empty list of at most 50 integers"}', status=400)
+                return
+            suite = body.get("suite", "synthetic")
+            if suite not in {"synthetic", "public"}:
+                self._send(b'{"error":"suite must be synthetic or public"}', status=400)
+                return
+            with tempfile.NamedTemporaryFile(suffix=".json") as output:
+                result = (
+                    run_public_suite(output.name, seeds)
+                    if suite == "public"
+                    else run_suite(output.name, seeds)
+                )
+            item = STORE.record_research_run(identity["org_id"], suite, seeds, result)
+            STORE.audit("research.run.created", identity["org_id"], identity["sub"], "research", item["id"])
             self._send(json.dumps(item).encode(), status=201)
             return
         if path == "/api/models":

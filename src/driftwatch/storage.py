@@ -111,6 +111,10 @@ class Store:
                     enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL,
                     destination TEXT, threshold REAL, created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS research_runs (
+                    id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL,
+                    seeds TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL
+                );
                 """
             )
             for table, column in (("models", "organization_id"), ("runs", "organization_id")):
@@ -255,6 +259,31 @@ class Store:
                 (organization_id,),
             )
             return [dict(row) for row in rows]
+
+    def record_research_run(
+        self, organization_id: str, suite: str, seeds: list[int], result: dict[str, Any]
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()),
+            "organization_id": organization_id,
+            "suite": suite,
+            "seeds": json.dumps(seeds),
+            "result": json.dumps(result),
+            "created_at": _now(),
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO research_runs VALUES (?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        return {**item, "seeds": seeds, "result": result}
+
+    def list_research_runs(self, organization_id: str) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            return [
+                {**dict(row), "seeds": _decode_json(row["seeds"]), "result": _decode_json(row["result"])}
+                for row in db.execute(
+                    "SELECT * FROM research_runs WHERE organization_id = ? ORDER BY created_at DESC LIMIT 50",
+                    (organization_id,),
+                )
+            ]
 
     def save_api_key(
         self, organization_id: str, name: str, key_hash: str
