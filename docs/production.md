@@ -49,6 +49,9 @@ python -m pytest tests/integration/test_postgres.py -q
 - Keep the public beta form protected with `DRIFTWATCH_ACCESS_REQUEST_RATE`
   and `DRIFTWATCH_ACCESS_REQUEST_BURST`; these are process-local limits and
   should be supplemented by an edge proxy or WAF in multi-node deployments.
+- Configure SMTP and `DRIFTWATCH_APP_URL` for automatic beta invitations.
+- Run the persisted schedule worker as a separate supervised service using
+  `driftwatch worker --organization <organization-id>`.
 - Use API keys only for ingestion and rotate/revoke them.
 - Review the Models workspace regularly and revoke keys belonging to departed
   services or replaced deployments; raw key values are never recoverable after

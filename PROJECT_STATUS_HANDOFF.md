@@ -17,7 +17,10 @@ request access from the login screen, and authenticated owner/admin users can
 approve or reject pending requests from the Models workspace. Approved
 requests receive a one-time, seven-day invitation token which creates the
 user's organization and account through the documented accept-invite endpoint.
-Transactional email delivery remains an operator/provider integration step.
+SMTP-based transactional invitation delivery is implemented and optional;
+configure `DRIFTWATCH_SMTP_*` and `DRIFTWATCH_APP_URL` for automatic delivery.
+The distributed schedule worker and tagged PyPI/GitHub release workflow are
+also available for launch operations.
 
 ## 1. Product summary
 

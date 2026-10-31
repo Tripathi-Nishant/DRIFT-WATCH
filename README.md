@@ -370,6 +370,7 @@ The optional `examples/placement-predictor-demo/` integration is intended for te
 
 - [Getting started and placement case study](START_HERE.md)
 - [Production deployment](docs/production.md)
+- [Public launch checklist](docs/launch-checklist.md)
 - [PostgreSQL setup](docs/postgresql.md)
 - [Capabilities](docs/capabilities.md)
 - [Contributing](CONTRIBUTING.md)

@@ -32,12 +32,16 @@ The login screen includes a **Request beta access** flow. It submits an
 unauthenticated request to `POST /api/v1/access-requests`; requests are stored
 as `PENDING` and can be approved or rejected by an owner/admin in the Models
 workspace. Set `DRIFTWATCH_ALLOWED_ORIGINS` to the public dashboard origin.
-Approval is currently an operator workflow and does not yet provision accounts
-or send email invitations. Approved requests now receive a one-time invitation
-token in the approval API response; deliver that token through your verified
-email provider or support workflow and have the user submit it to
-`POST /api/v1/auth/accept-invite`. Tokens expire after seven days and can only
-be used once. Never put invitation tokens in logs or analytics.
+Approval is an operator workflow that provisions access through a one-time
+invitation token. Configure the `DRIFTWATCH_SMTP_*` variables and
+`DRIFTWATCH_APP_URL` to email approved users automatically; without SMTP, the
+token remains available in the approval API response for a controlled support
+workflow. Tokens expire after seven days and can only be used once. Never put
+invitation tokens in logs or analytics.
+
+For persisted schedules, set `DRIFTWATCH_WORKER_ORG` and start the
+`driftwatch-worker` Compose service. It runs due schedules separately from the
+HTTP API and restarts automatically after host or process failures.
 
 ## Backups
 

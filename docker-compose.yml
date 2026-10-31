@@ -26,6 +26,13 @@ services:
       DRIFTWATCH_ALLOWED_ORIGINS: ${DRIFTWATCH_ALLOWED_ORIGINS:-http://localhost:8765}
       DRIFTWATCH_MAX_BODY_BYTES: ${DRIFTWATCH_MAX_BODY_BYTES:-5242880}
       DRIFTWATCH_WEBHOOK_URL: ${DRIFTWATCH_WEBHOOK_URL:-}
+      DRIFTWATCH_APP_URL: ${DRIFTWATCH_APP_URL:-http://localhost:8765}
+      DRIFTWATCH_SMTP_HOST: ${DRIFTWATCH_SMTP_HOST:-}
+      DRIFTWATCH_SMTP_PORT: ${DRIFTWATCH_SMTP_PORT:-587}
+      DRIFTWATCH_SMTP_FROM: ${DRIFTWATCH_SMTP_FROM:-}
+      DRIFTWATCH_SMTP_USER: ${DRIFTWATCH_SMTP_USER:-}
+      DRIFTWATCH_SMTP_PASSWORD: ${DRIFTWATCH_SMTP_PASSWORD:-}
+      DRIFTWATCH_SMTP_TLS: ${DRIFTWATCH_SMTP_TLS:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -38,6 +45,18 @@ services:
       start_period: 20s
     volumes:
       - driftwatch_data:/data
+  driftwatch-worker:
+    build: .
+    command: ["driftwatch", "worker", "--organization", "${DRIFTWATCH_WORKER_ORG:?set DRIFTWATCH_WORKER_ORG}"]
+    environment:
+      DRIFTWATCH_ENV: production
+      DRIFTWATCH_SECRET_KEY: ${DRIFTWATCH_SECRET_KEY:?set DRIFTWATCH_SECRET_KEY}
+      DRIFTWATCH_DATABASE_URL: postgresql://driftwatch:${POSTGRES_PASSWORD}@postgres:5432/driftwatch
+      DRIFTWATCH_WORKER_ORG: ${DRIFTWATCH_WORKER_ORG:?set DRIFTWATCH_WORKER_ORG}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 volumes:
   driftwatch_data:
   driftwatch_postgres:

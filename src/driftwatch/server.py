@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import smtplib
 import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,6 +20,7 @@ import pandas as pd
 from .alerts import AlertDispatcher
 from .metrics import metric_catalog
 from .monitor import demo_datasets
+from .notifications import send_invitation
 from .observability import Metrics, log_event
 from .openapi import API_SPEC
 from .pipeline import Monitor
@@ -440,24 +442,6 @@ class Handler(BaseHTTPRequestHandler):
                 status=202,
             )
             return
-            validated = _validate_access_request(body)
-            if not validated:
-                self._send(
-                    b'{"error":"email, organization, and a valid request are required"}',
-                    status=400,
-                )
-                return
-            email, organization, use_case = validated
-            request = STORE.create_access_request(email, organization, use_case)
-            self._send(
-                json.dumps({
-                    "id": request["id"],
-                    "status": request["status"],
-                    "message": "Access request received. We will review it shortly.",
-                }).encode(),
-                status=202,
-            )
-            return
         if path == "/api/v1/retraining":
             identity = self._require_write_access()
             if not identity:
@@ -541,6 +525,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(b'{"error":"pending access request not found"}', status=404)
                 return
             STORE.audit(f"access_request.{status.lower()}", identity["org_id"], identity["sub"], "access_request", request_id)
+            if status == "APPROVED" and request.get("invitation_token"):
+                try:
+                    request["invitation_email_sent"] = send_invitation(
+                        request["email"], request["invitation_token"]
+                    )
+                except (OSError, smtplib.SMTPException):
+                    LOGGER.exception("beta invitation email delivery failed")
+                    request["invitation_email_sent"] = False
             self._send(json.dumps(request).encode())
             return
         if path.startswith("/api/v1/api-keys/") and path.endswith("/revoke"):

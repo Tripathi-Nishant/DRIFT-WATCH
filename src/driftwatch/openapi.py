@@ -25,7 +25,8 @@ API_SPEC = {
         "/api/v1/auth/login": {"post": {"summary": "Create a JWT session"}},
         "/api/v1/auth/accept-invite": {
             "post": {
-                "summary": "Accept a one-time beta invitation and create an account"
+                "summary": "Accept a one-time beta invitation and create an account",
+                "requestBody": {"required": True},
             }
         },
         "/api/v1/access-requests": {

@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import time
 from pathlib import Path
 
 import pandas as pd
 
 from .pipeline import Monitor, ReferenceProfile
 from .retraining import approve_request, create_request
-from .scheduler import watch
+from .scheduler import run_due_schedules, watch
 from .server import run as run_server
 
 
@@ -53,6 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     schedule.add_argument("--current", required=True)
     schedule.add_argument("--out", required=True)
     schedule.add_argument("--interval", default=3600, type=int)
+    worker = sub.add_parser(
+        "worker", help="Run persisted schedules for an organization"
+    )
+    worker.add_argument("--organization", default=os.getenv("DRIFTWATCH_WORKER_ORG"))
+    worker.add_argument("--interval", default=60, type=int)
     retrain = sub.add_parser(
         "retrain", help="Create or approve an advisory retraining request"
     )
@@ -70,6 +77,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "schedule":
         watch(args.reference, args.current, args.out, args.interval)
         return 0
+    if args.command == "worker":
+        if not args.organization:
+            parser.error("worker requires --organization or DRIFTWATCH_WORKER_ORG")
+        from .server import STORE
+
+        while True:
+            for result in run_due_schedules(STORE, args.organization):
+                print(json.dumps(result), flush=True)
+            time.sleep(max(1, args.interval))
     if args.command == "retrain":
         if args.approve_by:
             print(json.dumps(approve_request(args.out, args.approve_by), indent=2))
