@@ -1,5 +1,8 @@
 """DriftWatch: open-source ML monitoring."""
 
+import os
+from typing import Any
+
 from .advanced_metrics import (
     image_metrics,
     llm_metrics,
@@ -29,6 +32,7 @@ __all__ = [
     "DecisionConfig",
     "DriftWatchClient",
     "DriftWatchError",
+    "monitor",
     "MonitorResult",
     "ReferenceProfile",
     "analyze",
@@ -50,3 +54,28 @@ __all__ = [
     "load_image_batch",
     "__version__",
 ]
+
+
+def monitor(
+    reference: Any,
+    current: Any,
+    *,
+    model_name: str = "model",
+    model_type: str = "classification",
+    api_key: str | None = None,
+    base_url: str | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """One-call monitoring integration using explicit or environment config."""
+    client = DriftWatchClient(
+        base_url or os.getenv("DRIFTWATCH_URL", "http://localhost:8765"),
+        api_key=api_key or os.getenv("DRIFTWATCH_API_KEY"),
+        token=os.getenv("DRIFTWATCH_TOKEN"),
+    )
+    return client.monitor(
+        reference,
+        current,
+        model_name=model_name,
+        model_type=model_type,
+        **kwargs,
+    )

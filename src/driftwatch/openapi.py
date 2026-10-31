@@ -76,5 +76,8 @@ API_SPEC = {
             "get": {"summary": "List reproducible benchmark runs", "security": [{"bearerAuth": []}]},
             "post": {"summary": "Run a seeded research benchmark", "security": [{"bearerAuth": []}]},
         },
+        "/api/v1/integration": {
+            "get": {"summary": "Get copy-ready SDK integration instructions", "security": [{"bearerAuth": []}]},
+        },
     },
 }

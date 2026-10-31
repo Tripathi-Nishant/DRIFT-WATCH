@@ -38,6 +38,7 @@ This matrix describes the current repository, not the aspirational roadmap.
 | Rule-aware alert dispatch | Implemented | Matching organization rules control webhook/email delivery; unmatched severities are recorded as skipped rather than silently delivered. |
 | Automatic dataset lineage | Implemented | API analyses register reference/current versions with fingerprints, dimensions, and originating run metadata. |
 | Reproducible research lab | Implemented | Seeded synthetic/public benchmark suites persist full results and confidence intervals for paper-ready evidence. |
+| One-call model integration | Implemented | `from driftwatch import monitor` reads environment credentials, persists analysis results, and returns the decision report in one call. |
 
 Evidently remains the stronger general-purpose monitoring framework. DriftWatch now
 has a metric-family architecture, governed provider adapters, tenant-aware storage,

@@ -10,21 +10,22 @@ optional delayed labels.
 python -m pip install "driftwatch @ git+https://github.com/Tripathi-Nishant/DRIFT-WATCH.git"
 ```
 
-```python
-import pandas as pd
-from driftwatch import DriftWatchClient
+The shortest production integration is four lines. Create an ingestion key in
+**Models & projects**, then set `DRIFTWATCH_API_KEY` in the model service:
 
-client = DriftWatchClient("http://localhost:8765", token="YOUR_DASHBOARD_JWT")
-report = client.analyze(
-    pd.read_csv("reference.csv"),
-    pd.read_csv("current.csv"),
-    model_name="fraud-classifier",
-    model_type="classification",
-    predictions=model.predict(current),
-    labels=current_labels,
-)
+```python
+from driftwatch import monitor
+
+report = monitor(reference_df, current_df, model_name="fraud-classifier")
 print(report["summary"]["decision"])
 ```
+
+The report is persisted automatically in the registered organization dashboard.
+The helper reads `DRIFTWATCH_URL` and `DRIFTWATCH_API_KEY`; explicit
+`base_url=` and `api_key=` arguments are also supported.
+
+For richer control, use `DriftWatchClient` and pass predictions, delayed labels,
+multimodal records, or custom metric payloads.
 
 For a production job, create an ingestion key in **Models & projects** and use
 it instead of a human JWT:

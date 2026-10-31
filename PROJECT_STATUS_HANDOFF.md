@@ -271,6 +271,8 @@ The current React dashboard includes:
   multi-model comparison
 - Research Lab for seeded benchmark execution, confidence intervals, experiment
   history, and JSON evidence downloads
+- Four-line SDK integration with environment configuration and copy-ready
+  onboarding snippet
 - JSON report download
 
 ## 8. Python package and integration

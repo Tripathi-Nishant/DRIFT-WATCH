@@ -210,6 +210,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/schedules",
             "/api/v1/alert-rules",
             "/api/v1/research",
+            "/api/v1/integration",
             "/api/v1/model-comparison",
         }:
             identity = self._identity()
@@ -234,6 +235,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.compare_models(identity["org_id"])).encode())
             elif path == "/api/v1/research":
                 self._send(json.dumps(STORE.list_research_runs(identity["org_id"])).encode())
+            elif path == "/api/v1/integration":
+                self._send(
+                    json.dumps(
+                        {
+                            "install": 'pip install "driftwatch @ git+https://github.com/Tripathi-Nishant/DRIFT-WATCH.git"',
+                            "python": (
+                                "from driftwatch import monitor\n"
+                                "report = monitor(reference_df, current_df, "
+                                'model_name="my-model", api_key="YOUR_DW_KEY")\n'
+                                'print(report["summary"]["decision"])'
+                            ),
+                            "dashboard": "Reports are persisted in this organization workspace.",
+                            "api_key_header": "X-DriftWatch-Key",
+                        }
+                    ).encode()
+                )
             else:
                 self._send(json.dumps(STORE.list_projects(identity["org_id"])).encode())
             return

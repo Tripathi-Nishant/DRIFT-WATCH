@@ -235,6 +235,19 @@ The command is intended to produce a self-contained HTML report containing confi
 
 ### Use the library from Python
 
+The fastest registered-workspace integration is:
+
+```python
+from driftwatch import monitor
+
+report = monitor(reference_df, current_df, model_name="fraud-classifier")
+print(report["summary"]["decision"])
+```
+
+Set `DRIFTWATCH_URL` and `DRIFTWATCH_API_KEY` in the model service. Every call
+is persisted to the organization dashboard, including the report, dataset
+lineage, decision trace, alerts, and audit metadata.
+
 ```python
 from driftwatch import Monitor
 

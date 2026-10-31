@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -31,6 +32,15 @@ class DriftWatchClient:
         self.api_key = api_key
         self.token = token
         self.timeout = timeout
+
+    @classmethod
+    def from_environment(cls) -> DriftWatchClient:
+        """Create a client from DRIFTWATCH_URL and DRIFTWATCH_API_KEY."""
+        return cls(
+            os.getenv("DRIFTWATCH_URL", "http://localhost:8765"),
+            api_key=os.getenv("DRIFTWATCH_API_KEY"),
+            token=os.getenv("DRIFTWATCH_TOKEN"),
+        )
 
     def _request(self, path: str, payload: dict[str, Any] | None = None) -> Any:
         headers = {"Content-Type": "application/json"}
@@ -83,6 +93,28 @@ class DriftWatchClient:
             payload["labels"] = _values(labels)
         payload.update(extra)
         return self._request("/api/analyze", payload)
+
+    def monitor(
+        self,
+        reference: Any,
+        current: Any,
+        *,
+        model_name: str = "model",
+        model_type: str = "classification",
+        predictions: Any = None,
+        labels: Any = None,
+        **extra: Any,
+    ) -> dict[str, Any]:
+        """Analyze and persist one monitoring window for a registered workspace."""
+        return self.analyze(
+            reference,
+            current,
+            model_name=model_name,
+            model_type=model_type,
+            predictions=predictions,
+            labels=labels,
+            **extra,
+        )
 
     def ingest_predictions(
         self, predictions: list[dict[str, Any]], *, model_id: str | None = None
