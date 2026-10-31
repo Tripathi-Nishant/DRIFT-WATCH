@@ -3,7 +3,7 @@
 Last updated: 31 October 2026  
 Repository: `https://github.com/Tripathi-Nishant/DRIFT-WATCH`  
 Current branch: `main`  
-Latest feature commit: see the most recent `feat:` commit on `main`.
+Latest feature commit: `5b707a7`
 
 This document is the authoritative handoff for the DriftWatch project. It is
 written so that a new developer or AI agent can understand what exists, how the
