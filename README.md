@@ -23,6 +23,7 @@ DriftWatch is a self-hostable ML monitoring platform for examining changes in da
 - Dependency-light Python client and OpenAPI-compatible API contract
 - JWT authentication, roles, projects, API keys, and audit events
 - PostgreSQL-backed deployment with migration support
+- Public beta-access requests with owner/admin review
 - Retraining request and approval history
 - Dashboard for monitoring reports and operational workflows
 - Operations workspace for dataset versions, schedules, alert rules, and
@@ -325,6 +326,14 @@ The default local store is `.driftwatch/driftwatch.db`.
 | `DRIFTWATCH_SMTP_*` | Configure optional email alerts |
 
 See `.env.example` and the deployment documentation for the complete configuration. Keep secrets out of source control and never expose server credentials in frontend environment variables.
+
+### Launching a public beta
+
+The dashboard login screen accepts unauthenticated beta-access requests.
+Deploy the API with PostgreSQL behind TLS, set
+`DRIFTWATCH_ALLOWED_ORIGINS` to the dashboard origin, and review requests in
+the Models workspace. See [the small AWS deployment guide](docs/aws-small.md)
+and [the production checklist](docs/production.md) for launch operations.
 
 Webhook notifications are described as supporting Slack/Discord-compatible endpoints with retries. Validate provider behavior, delivery guarantees, and credentials in your own environment before depending on alerts operationally.
 

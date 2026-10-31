@@ -128,6 +128,11 @@ class Store:
                     status TEXT NOT NULL, owner TEXT, detail TEXT NOT NULL,
                     created_at TEXT NOT NULL, updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS access_requests (
+                    id TEXT PRIMARY KEY, email TEXT NOT NULL, organization TEXT NOT NULL,
+                    use_case TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
+                    reviewed_at TEXT, reviewer TEXT
+                );
                 """
             )
             for table, column in (("models", "organization_id"), ("runs", "organization_id")):
@@ -158,6 +163,41 @@ class Store:
                 tuple(organization.values()),
             )
         return organization
+
+    def create_access_request(
+        self, email: str, organization: str, use_case: str
+    ) -> dict[str, Any]:
+        item = {
+            "id": str(uuid.uuid4()), "email": email.strip().lower(),
+            "organization": organization.strip(), "use_case": use_case.strip(),
+            "status": "PENDING", "created_at": _now(),
+            "reviewed_at": None, "reviewer": None,
+        }
+        with self._lock, self._connect() as db:
+            db.execute("INSERT INTO access_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?)", tuple(item.values()))
+        return item
+
+    def list_access_requests(self) -> list[dict[str, Any]]:
+        with self._connect() as db:
+            return [dict(row) for row in db.execute(
+                "SELECT * FROM access_requests ORDER BY created_at DESC"
+            )]
+
+    def review_access_request(
+        self, request_id: str, status: str, reviewer: str
+    ) -> dict[str, Any] | None:
+        if status not in {"APPROVED", "REJECTED"}:
+            raise ValueError("status must be APPROVED or REJECTED")
+        with self._lock, self._connect() as db:
+            db.execute(
+                "UPDATE access_requests SET status = ?, reviewed_at = ?, reviewer = ? "
+                "WHERE id = ? AND status = 'PENDING'",
+                (status, _now(), reviewer, request_id),
+            )
+            row = db.execute(
+                "SELECT * FROM access_requests WHERE id = ?", (request_id,)
+            ).fetchone()
+            return dict(row) if row else None
 
     def create_user(
         self, email: str, password_hash: str, organization_id: str, role: str = "OWNER"

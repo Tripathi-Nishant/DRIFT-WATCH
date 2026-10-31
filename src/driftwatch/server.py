@@ -230,6 +230,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/model-comparison",
             "/api/v1/incidents",
             "/api/v1/api-keys",
+            "/api/v1/access-requests",
         }:
             identity = self._identity()
             if not identity:
@@ -257,6 +258,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(json.dumps(STORE.list_incidents(identity["org_id"])).encode())
             elif path == "/api/v1/api-keys":
                 self._send(json.dumps(STORE.list_api_keys(identity["org_id"])).encode())
+            elif path == "/api/v1/access-requests":
+                if identity.get("role") not in {"OWNER", "ADMIN"}:
+                    self._send(b'{"error":"insufficient role"}', status=403)
+                    return
+                self._send(json.dumps(STORE.list_access_requests()).encode())
             elif path == "/api/v1/research":
                 self._send(json.dumps(STORE.list_research_runs(identity["org_id"])).encode())
             elif path == "/api/v1/integration":
@@ -338,10 +344,12 @@ class Handler(BaseHTTPRequestHandler):
             "/api/v1/schedules",
             "/api/v1/alert-rules",
             "/api/v1/incidents",
+            "/api/v1/access-requests",
         } and not (
             path.startswith("/api/v1/retraining")
             or path.startswith("/api/v1/models/")
             or path.startswith("/api/v1/incidents/")
+            or path.startswith("/api/v1/access-requests/")
         ):
             self._send(b"Not found", "text/plain", 404)
             return
@@ -357,6 +365,19 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send(b'{"error":"invalid JSON"}', status=400)
+            return
+        if path == "/api/v1/access-requests":
+            request = STORE.create_access_request(
+                body["email"], body["organization"], body.get("use_case", "")
+            )
+            self._send(
+                json.dumps({
+                    "id": request["id"],
+                    "status": request["status"],
+                    "message": "Access request received. We will review it shortly.",
+                }).encode(),
+                status=202,
+            )
             return
         if path == "/api/v1/retraining":
             identity = self._require_write_access()
@@ -429,6 +450,19 @@ class Handler(BaseHTTPRequestHandler):
                 return
             STORE.audit(f"incident.{status.lower()}", identity["org_id"], identity["sub"], "incident", incident_id)
             self._send(json.dumps(incident).encode())
+            return
+        if path.startswith("/api/v1/access-requests/") and path.endswith(("/approve", "/reject")):
+            identity = self._require_write_access()
+            if not identity or identity.get("role") not in {"OWNER", "ADMIN"}:
+                return
+            request_id = path.split("/")[-2]
+            status = "APPROVED" if path.endswith("/approve") else "REJECTED"
+            request = STORE.review_access_request(request_id, status, identity["sub"])
+            if not request:
+                self._send(b'{"error":"pending access request not found"}', status=404)
+                return
+            STORE.audit(f"access_request.{status.lower()}", identity["org_id"], identity["sub"], "access_request", request_id)
+            self._send(json.dumps(request).encode())
             return
         if path.startswith("/api/v1/api-keys/") and path.endswith("/revoke"):
             identity = self._require_write_access()

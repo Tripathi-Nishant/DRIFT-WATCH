@@ -10,6 +10,15 @@ written so that a new developer or AI agent can understand what exists, how the
 parts connect, how to run it, what has been verified, and what remains before a
 larger production launch.
 
+## Current launch status
+
+The public beta-access workflow is implemented and validated. Visitors can
+request access from the login screen, and authenticated owner/admin users can
+approve or reject pending requests from the Models workspace. Requests are
+persisted in SQLite and PostgreSQL and exposed through the documented API.
+Approval does not yet provision accounts or send email; an invitation-token and
+transactional-email integration is the next launch hardening step.
+
 ## 1. Product summary
 
 DriftWatch is a self-hostable machine-learning monitoring platform inspired by

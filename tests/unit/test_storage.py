@@ -64,6 +64,15 @@ def test_api_key_inventory_and_revocation(tmp_path):
     assert store.revoke_api_key("org", key["id"]) is None
 
 
+def test_access_request_review(tmp_path):
+    store = Store(tmp_path / "driftwatch.db")
+    request = store.create_access_request("User@Example.com", "Acme", "Fraud monitoring")
+    assert request["status"] == "PENDING"
+    reviewed = store.review_access_request(request["id"], "APPROVED", "owner")
+    assert reviewed["status"] == "APPROVED"
+    assert store.review_access_request(request["id"], "REJECTED", "owner")["status"] == "APPROVED"
+
+
 def test_alert_rule_can_suppress_unmatched_severity(tmp_path):
     from driftwatch.alerts import AlertDispatcher
 

@@ -65,6 +65,7 @@ class PostgresStore(Store):
                 CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, name TEXT NOT NULL, enabled INTEGER NOT NULL, severity TEXT NOT NULL, channel TEXT NOT NULL, destination TEXT, threshold REAL, metric TEXT NOT NULL DEFAULT 'drift_rate', created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS research_runs (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, suite TEXT NOT NULL, seeds JSONB NOT NULL, result JSONB NOT NULL, created_at TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, run_id TEXT, model_id TEXT, title TEXT NOT NULL, severity TEXT NOT NULL, status TEXT NOT NULL, owner TEXT, detail TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS access_requests (id TEXT PRIMARY KEY, email TEXT NOT NULL, organization TEXT NOT NULL, use_case TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, reviewed_at TEXT, reviewer TEXT);
                 CREATE INDEX IF NOT EXISTS idx_runs_org_created ON runs(organization_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_models_org_created ON models(organization_id, created_at DESC);
                 ALTER TABLE alert_rules ADD COLUMN IF NOT EXISTS metric TEXT NOT NULL DEFAULT 'drift_rate';

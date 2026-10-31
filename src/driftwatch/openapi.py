@@ -23,6 +23,10 @@ API_SPEC = {
         "/api/v1/metrics": {"get": {"summary": "Metric catalog"}},
         "/api/v1/auth/register": {"post": {"summary": "Create an organization owner"}},
         "/api/v1/auth/login": {"post": {"summary": "Create a JWT session"}},
+        "/api/v1/access-requests": {
+            "post": {"summary": "Request beta access without authentication"},
+            "get": {"summary": "List beta access requests", "security": [{"bearerAuth": []}]},
+        },
         "/api/analyze": {
             "post": {
                 "summary": "Analyze reference/current records",

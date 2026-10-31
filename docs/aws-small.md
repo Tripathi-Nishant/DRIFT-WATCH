@@ -26,6 +26,15 @@ docker compose up -d --build
 Use `docker compose ps`, `/healthz`, and `/readyz` as the deployment smoke
 check. Do not open PostgreSQL to the public internet.
 
+## Public beta access
+
+The login screen includes a **Request beta access** flow. It submits an
+unauthenticated request to `POST /api/v1/access-requests`; requests are stored
+as `PENDING` and can be approved or rejected by an owner/admin in the Models
+workspace. Set `DRIFTWATCH_ALLOWED_ORIGINS` to the public dashboard origin.
+Approval is currently an operator workflow and does not yet provision accounts
+or send email invitations.
+
 ## Backups
 
 Install the PostgreSQL client tools and run a daily backup to a private S3
