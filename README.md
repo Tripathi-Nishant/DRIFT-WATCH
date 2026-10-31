@@ -316,6 +316,7 @@ The optional `examples/placement-predictor-demo/` integration is intended for te
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Model integration guide](docs/integration.md)
+- [Complete project handoff](PROJECT_STATUS_HANDOFF.md)
 
 Some links may depend on the current repository layout. If a document is not present in your branch, update the link or add the document before publishing.
 
