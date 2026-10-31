@@ -3,7 +3,7 @@
 Last updated: 31 October 2026  
 Repository: `https://github.com/Tripathi-Nishant/DRIFT-WATCH`  
 Current branch: `main`  
-Latest feature commit: `8d375fa`
+Latest feature commit: see the most recent `feat:` commit on `main`.
 
 This document is the authoritative handoff for the DriftWatch project. It is
 written so that a new developer or AI agent can understand what exists, how the
@@ -245,6 +245,10 @@ The current React dashboard includes:
 - Overview/workspace health
 - Latest decision summary
 - Historical drift and quality trend chart
+- Composite model-health score ring combining drift and quality evidence
+- Ranked risk-hotspot view for the most affected features
+- Cross-window drift heatmap showing feature intensity across recent runs
+- Latest-versus-previous window comparison for drift, quality, and decision
 - Recent monitoring runs
 - CSV upload and analysis form
 - Full report page
@@ -441,6 +445,8 @@ security upgrades before installing the runtime package.
   policy; the current alert page shows delivery history, while configuration is
   deployment/environment driven.
 - Add first-class project/model selection to the dashboard analysis form.
+- Add interactive drill-down from heatmap cells directly into a selected run.
+- Add trend filters by model, project, severity, and date range.
 - Add dataset/profile versioning and explicit reference-window management.
 - Add scheduled dashboard jobs with visible schedules and run history.
 - Add a formal plugin/metric registration API for third-party metrics.
