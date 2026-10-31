@@ -375,6 +375,7 @@ The optional `examples/placement-predictor-demo/` integration is intended for te
 - [PostgreSQL setup](docs/postgresql.md)
 - [Capabilities](docs/capabilities.md)
 - [Contributing](CONTRIBUTING.md)
+- [Safe VS Code editing](docs/contributing.md)
 - [Security policy](SECURITY.md)
 - [Model integration guide](docs/integration.md)
 - [Complete project handoff](PROJECT_STATUS_HANDOFF.md)
