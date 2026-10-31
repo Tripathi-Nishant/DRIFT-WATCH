@@ -248,6 +248,12 @@ Set `DRIFTWATCH_URL` and `DRIFTWATCH_API_KEY` in the model service. Every call
 is persisted to the organization dashboard, including the report, dataset
 lineage, decision trace, alerts, and audit metadata.
 
+The task is optional and defaults to `auto`. DriftWatch supports
+classification, regression, forecasting, ranking, recommendation, anomaly
+detection, clustering, NLP, computer vision, RAG, LLM, and custom model
+outputs. Unknown tasks receive safe task-agnostic diagnostics instead of
+incorrect classification assumptions.
+
 ```python
 from driftwatch import Monitor
 

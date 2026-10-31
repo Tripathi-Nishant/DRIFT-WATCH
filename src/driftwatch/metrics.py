@@ -157,7 +157,7 @@ def text_metrics(reference: pd.Series, current: pd.Series) -> dict[str, Any]:
 
 
 def prediction_quality_metrics(
-    predictions: Any, labels: Any, *, model_type: str = "classification"
+    predictions: Any, labels: Any, *, model_type: str = "auto"
 ) -> dict[str, Any]:
     """Return richer quality measurements for labelled prediction windows."""
     y_pred, y_true = np.asarray(predictions), np.asarray(labels)
@@ -167,7 +167,7 @@ def prediction_quality_metrics(
             "reason": "equal non-zero prediction and label arrays required",
         }
     result: dict[str, Any] = {"available": True, "rows": int(len(y_true))}
-    if model_type == "regression":
+    if model_type in {"regression", "forecasting"}:
         residuals = y_true.astype(float) - y_pred.astype(float)
         result.update(
             {
@@ -178,7 +178,7 @@ def prediction_quality_metrics(
                 "prediction_mean": _round(y_pred.mean()),
             }
         )
-    else:
+    elif model_type in {"classification", "binary_classification", "multiclass", "multilabel"}:
         classes, counts = np.unique(y_true, return_counts=True)
         predicted_classes, predicted_counts = np.unique(y_pred, return_counts=True)
         result.update(
@@ -188,6 +188,17 @@ def prediction_quality_metrics(
                 "prediction_distribution": {
                     str(k): int(v) for k, v in zip(predicted_classes, predicted_counts)
                 },
+            }
+        )
+    else:
+        result.update(
+            {
+                "task_agnostic": True,
+                "prediction_unique_count": int(len(np.unique(y_pred))),
+                "label_unique_count": int(len(np.unique(y_true))),
+                "prediction_sample": y_pred[:10].tolist(),
+                "label_sample": y_true[:10].tolist(),
+                "note": "Use register_metric for task-specific quality measures.",
             }
         )
     return result
@@ -242,6 +253,7 @@ def metric_catalog() -> list[dict[str, str]]:
         {"id": "outlier_rate", "family": "quality", "kind": "numeric"},
         {"id": "text_length_ks", "family": "text", "kind": "text"},
         {"id": "empty_rate", "family": "text", "kind": "text"},
+        {"id": "task_agnostic_prediction_summary", "family": "performance", "kind": "any"},
         {"id": "accuracy", "family": "performance", "kind": "classification"},
         {"id": "precision", "family": "performance", "kind": "classification"},
         {"id": "recall", "family": "performance", "kind": "classification"},

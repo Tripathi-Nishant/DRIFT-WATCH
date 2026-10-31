@@ -261,7 +261,7 @@ def _performance(
         "label_coverage": 1.0,
         "model_type": model_type,
     }
-    if model_type == "regression":
+    if model_type in {"regression", "forecasting"}:
         result.update(
             {
                 "mae": round(
@@ -284,7 +284,7 @@ def _performance(
             "std": round(float((label_values.astype(float) - prediction_values.astype(float)).std()), 6),
             "p95_absolute": round(float(np.quantile(np.abs(label_values.astype(float) - prediction_values.astype(float)), 0.95)), 6),
         }
-    else:
+    elif model_type in {"classification", "binary_classification", "multiclass", "multilabel"}:
         labels_int = label_values.astype(int)
         predicted = (
             (prediction_values >= 0.5).astype(int)
@@ -336,6 +336,32 @@ def _performance(
                 "recall": [round(float(value), 6) for value in recall[:: max(1, len(recall) // 50)]],
                 "precision": [round(float(value), 6) for value in precision[:: max(1, len(precision) // 50)]],
             }
+    else:
+        prediction_flat = prediction_values.reshape(-1)
+        label_flat = label_values.reshape(-1)
+        result.update(
+            {
+                "task_agnostic": True,
+                "prediction_count": int(len(prediction_flat)),
+                "label_count": int(len(label_flat)),
+                "prediction_unique_count": int(len(np.unique(prediction_flat))),
+                "label_unique_count": int(len(np.unique(label_flat))),
+                "prediction_null_rate": float(
+                    pd.isna(prediction_flat).mean()
+                ),
+                "label_null_rate": float(pd.isna(label_flat).mean()),
+                "prediction_summary": {
+                    "sample": prediction_flat[:10].tolist(),
+                },
+                "label_summary": {
+                    "sample": label_flat[:10].tolist(),
+                },
+                "note": (
+                    "Task-specific quality metrics are not inferred for custom "
+                    "tasks. Register a custom metric or provide a supported task."
+                ),
+            }
+        )
     return result
 
 
@@ -347,7 +373,7 @@ class Monitor:
         reference: pd.DataFrame,
         *,
         target: str | None = None,
-        model_type: str = "classification",
+        model_type: str = "auto",
         threshold: float = 0.1,
         model_name: str = "model",
         decision_config: DecisionConfig | dict[str, Any] | None = None,
@@ -415,6 +441,7 @@ class Monitor:
         base["summary"].update(
             {
                 "model": self.model_name,
+                "task": self.model_type,
                 "severity": decision["severity"],
                 "decision": decision["decision"],
                 "confidence": decision["confidence"],

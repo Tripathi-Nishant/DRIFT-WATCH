@@ -27,7 +27,7 @@ def run_once(
     result = Monitor.from_reference(
         read(reference_path),
         model_name=config.get("model_name", "scheduled-model"),
-        model_type=config.get("model_type", "classification"),
+        model_type=config.get("task", config.get("model_type", "auto")),
         decision_config=config.get("decision"),
     ).run(read(current_path))
     result.save_html(output_path)

@@ -526,7 +526,7 @@ class Handler(BaseHTTPRequestHandler):
             )
         result = Monitor.from_reference(
             reference,
-            model_type=body.get("model_type", "classification"),
+            model_type=body.get("task", body.get("model_type", "auto")),
             model_name=body.get("model_name", "model"),
         ).run(
             current,

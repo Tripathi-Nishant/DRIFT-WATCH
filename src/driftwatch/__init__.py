@@ -61,7 +61,8 @@ def monitor(
     current: Any,
     *,
     model_name: str = "model",
-    model_type: str = "classification",
+    model_type: str = "auto",
+    task: str | None = None,
     api_key: str | None = None,
     base_url: str | None = None,
     **kwargs: Any,
@@ -77,5 +78,6 @@ def monitor(
         current,
         model_name=model_name,
         model_type=model_type,
+        task=task,
         **kwargs,
     )

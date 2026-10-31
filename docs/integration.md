@@ -44,6 +44,12 @@ The reference and current records must use the same feature names and the same
 preprocessing pipeline. If labels are unavailable, DriftWatch still reports
 data and prediction drift but cannot calculate current model quality.
 
+`model_type` is optional. Use `task="forecasting"`, `task="ranking"`,
+`task="anomaly_detection"`, `task="clustering"`, `task="nlp"`,
+`task="computer_vision"`, `task="rag"`, `task="llm"`, or any custom task name.
+Every task receives the common monitoring contract; classification and
+regression metrics are only added when their assumptions are valid.
+
 ## API contract
 
 The running service exposes an OpenAPI-compatible description at:

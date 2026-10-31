@@ -75,7 +75,8 @@ class DriftWatchClient:
         current: Any,
         *,
         model_name: str = "model",
-        model_type: str = "classification",
+        model_type: str = "auto",
+        task: str | None = None,
         predictions: Any = None,
         labels: Any = None,
         **extra: Any,
@@ -85,7 +86,7 @@ class DriftWatchClient:
             "reference": _records(reference),
             "current": _records(current),
             "model_name": model_name,
-            "model_type": model_type,
+            "model_type": task or model_type,
         }
         if predictions is not None:
             payload["predictions"] = _values(predictions)
@@ -100,7 +101,7 @@ class DriftWatchClient:
         current: Any,
         *,
         model_name: str = "model",
-        model_type: str = "classification",
+        model_type: str = "auto",
         predictions: Any = None,
         labels: Any = None,
         **extra: Any,

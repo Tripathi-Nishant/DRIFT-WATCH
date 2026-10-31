@@ -38,8 +38,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--labels")
     run.add_argument(
         "--model-type",
-        default="classification",
-        choices=["classification", "regression"],
+        default="auto",
+        help="ML task type (auto, classification, regression, forecasting, or custom)",
     )
     run.add_argument("--model-name", default="model")
     run.add_argument("--config", help="JSON configuration file")
