@@ -8,3 +8,18 @@ html{scroll-behavior:smooth}body{background:radial-gradient(circle at 90% -10%,#
 @media(max-width:1100px){.layout main{padding:32px 28px}.global-search input{width:105px}.layout aside{width:220px}.hero{padding:25px}.report-cards{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.layout{display:block}.layout aside{position:static;width:100%;height:auto;padding:16px;display:block}.layout aside .brand{margin-bottom:14px}.layout aside .workspace{display:none}.layout aside nav{display:flex;overflow:auto;padding-bottom:3px}.layout aside nav button{white-space:nowrap;padding:9px 11px}.sidebar-footer{display:none}.layout main{padding:23px 16px}header{gap:15px;flex-direction:column;margin-bottom:20px}.header-actions{width:100%}.global-search{flex:1}.global-search input{width:100%}.run-toolbar{align-items:flex-start;gap:10px;flex-direction:column;margin-top:0}.filter-group{width:100%;overflow:auto}.filter-group select{flex:1;min-width:125px}.export-button{align-self:flex-end}.hero{display:block}.hero-actions{margin-top:22px;flex-wrap:wrap}.stats{grid-template-columns:repeat(2,1fr)}.skeleton-grid{grid-template-columns:repeat(2,1fr)}.report-status{display:block}.confidence{border-left:0;border-top:1px solid #eee;margin-top:18px;padding:15px 0 0;text-align:left}.json-grid{grid-template-columns:1fr}}
 .integration-snippet{background:#201d35;color:#ddd6fe;border-radius:8px;padding:13px;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;margin:12px 0;overflow:auto}
+/* Premium product surface: restrained glass, depth, and responsive focus states. */
+:root{--dw-accent:#7055e4;--dw-ink:#202132;--dw-border:#e5e7ef;--dw-shadow:0 12px 32px rgba(38,31,86,.07)}
+body{background:radial-gradient(circle at 85% -10%,#eeeaff 0,transparent 34%),#f7f8fc;color:var(--dw-ink)}
+.layout aside,.stat,.panel,.metric-card,.report-status{box-shadow:var(--dw-shadow)}
+.layout aside{background:rgba(255,255,255,.86);backdrop-filter:blur(16px)}
+.brand{background:linear-gradient(100deg,#7358eb,#a16ff2);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-mark{display:inline-grid;place-items:center;width:27px;height:27px;margin-right:5px;border-radius:8px;background:linear-gradient(135deg,#7055e4,#a878ef);color:#fff;font-size:12px}
+button,.secondary,.layout aside button,select,input,textarea{transition:box-shadow .18s ease,transform .18s ease,border-color .18s ease,background .18s ease}
+button:hover:not(:disabled){transform:translateY(-1px)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(112,85,228,.22);outline-offset:2px;border-color:var(--dw-accent)}
+.stat,.panel,.metric-card{border-color:rgba(220,222,235,.9)}
+.panel-heading{border-bottom:1px solid #f0f0f5;padding-bottom:12px}
+.hero,.operations-hero,.research-hero{box-shadow:0 18px 45px rgba(61,44,142,.18)}
+html[data-theme=dark] body{background:radial-gradient(circle at 85% -10%,#28224e 0,transparent 35%),#12121c}
+html[data-theme=dark] .layout aside,html[data-theme=dark] .stat,html[data-theme=dark] .panel,html[data-theme=dark] .metric-card,html[data-theme=dark] .report-status{box-shadow:0 12px 32px rgba(0,0,0,.2)}
